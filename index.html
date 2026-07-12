@@ -4,33 +4,68 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bài kiểm tra — Thì động từ (50 câu)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <!-- Màn 1: form thông tin -->
   <section id="screen-info" class="screen">
-    <h1>Bài kiểm tra: Thì động từ (Test 15–16)</h1>
-    <p>50 câu · 60 phút</p>
-    <form id="info-form">
-      <label>Họ và tên *<input id="full-name" required autocomplete="name" /></label>
-      <label>Lớp *<input id="class-name" required /></label>
-      <button type="submit">Bắt đầu làm bài</button>
-    </form>
+    <div class="card intro-card">
+      <span class="badge">Bài kiểm tra</span>
+      <h1>Thì động từ <span class="muted">(Test 15–16)</span></h1>
+      <div class="meta-row">
+        <span class="chip">📝 50 câu</span>
+        <span class="chip">⏱️ 60 phút</span>
+        <span class="chip">✅ Trắc nghiệm A/B/C/D</span>
+      </div>
+      <p class="lead">Nhập thông tin của bạn để bắt đầu. Đồng hồ sẽ chạy ngay khi bạn nhấn <b>Bắt đầu</b>.</p>
+      <form id="info-form">
+        <label class="field">
+          <span class="field-label">Họ và tên <em>*</em></span>
+          <input id="full-name" required autocomplete="name" placeholder="Nguyễn Văn A" />
+        </label>
+        <label class="field">
+          <span class="field-label">Lớp <em>*</em></span>
+          <input id="class-name" required placeholder="12A1" />
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Bắt đầu làm bài →</button>
+      </form>
+    </div>
   </section>
 
   <!-- Màn 2: làm bài -->
   <section id="screen-quiz" class="screen hidden">
-    <div id="timer-bar">Thời gian còn lại: <span id="timer">60:00</span>
-      <span id="progress"></span></div>
-    <form id="quiz-form"><div id="questions"></div>
-      <button type="submit" id="submit-btn">Nộp bài</button>
+    <div id="timer-bar">
+      <div class="timer-left">
+        <span class="timer-dot"></span>
+        <div>
+          <div class="timer-caption">Thời gian còn lại</div>
+          <span id="timer" class="timer-clock">60:00</span>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+        <span id="progress" class="progress-text"></span>
+      </div>
+    </div>
+    <form id="quiz-form">
+      <div id="questions"></div>
+      <div class="submit-row">
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-lg">Nộp bài</button>
+      </div>
     </form>
   </section>
 
   <!-- Màn 3: kết quả -->
   <section id="screen-result" class="screen hidden">
-    <h2>Đã nộp bài!</h2>
-    <p id="score-text"></p>
+    <div class="card result-card">
+      <div class="result-check">✓</div>
+      <h2>Đã nộp bài thành công!</h2>
+      <p id="score-text" class="score-text"></p>
+      <p class="muted">Bạn có thể đóng trang này.</p>
+    </div>
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

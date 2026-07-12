@@ -25,18 +25,28 @@ async function loadQuestions() {
 function renderQuiz() {
   $('questions').innerHTML = questions.map(q => `
     <div class="q" data-num="${q.number}">
-      <div class="stem">Câu ${q.number}. ${escapeHtml(q.content)}</div>
+      <div class="stem"><span class="num">${q.number}</span>${escapeHtml(q.content)}</div>
       ${['a','b','c','d'].map(o => `
-        <label class="opt"><input type="radio" name="q${q.number}" value="${o.toUpperCase()}" />
-          ${o.toUpperCase()}. ${escapeHtml(q['option_' + o])}</label>`).join('')}
+        <label class="opt">
+          <input type="radio" name="q${q.number}" value="${o.toUpperCase()}" />
+          <span class="opt-key">${o.toUpperCase()}</span>
+          <span class="opt-text">${escapeHtml(q['option_' + o])}</span>
+        </label>`).join('')}
     </div>`).join('');
   updateProgress();
-  $('quiz-form').addEventListener('change', updateProgress);
+  $('quiz-form').addEventListener('change', (e) => {
+    const q = e.target.closest('.q');
+    if (q) q.classList.add('answered');
+    updateProgress();
+  });
 }
 
 function updateProgress() {
   const answered = questions.filter(q => $('quiz-form').querySelector(`input[name="q${q.number}"]:checked`)).length;
-  $('progress').textContent = `Đã trả lời: ${answered}/${questions.length}`;
+  const pct = questions.length ? Math.round((answered / questions.length) * 100) : 0;
+  $('progress').textContent = `Đã trả lời ${answered}/${questions.length}`;
+  const fill = $('progress-fill');
+  if (fill) fill.style.width = pct + '%';
 }
 
 function startTimer() {
