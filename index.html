@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bài kiểm tra — Thì động từ (50 câu)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Màn 1: form thông tin -->
+  <section id="screen-info" class="screen">
+    <h1>Bài kiểm tra: Thì động từ (Test 15–16)</h1>
+    <p>50 câu · 60 phút</p>
+    <form id="info-form">
+      <label>Họ và tên *<input id="full-name" required autocomplete="name" /></label>
+      <label>Lớp *<input id="class-name" required /></label>
+      <button type="submit">Bắt đầu làm bài</button>
+    </form>
+  </section>
+
+  <!-- Màn 2: làm bài -->
+  <section id="screen-quiz" class="screen hidden">
+    <div id="timer-bar">Thời gian còn lại: <span id="timer">60:00</span>
+      <span id="progress"></span></div>
+    <form id="quiz-form"><div id="questions"></div>
+      <button type="submit" id="submit-btn">Nộp bài</button>
+    </form>
+  </section>
+
+  <!-- Màn 3: kết quả -->
+  <section id="screen-result" class="screen hidden">
+    <h2>Đã nộp bài!</h2>
+    <p id="score-text"></p>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
