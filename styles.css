@@ -127,12 +127,16 @@ input:focus {
 .btn-lg { padding: 15px 40px; font-size: 17px; }
 
 /* ---------- Timer bar ---------- */
-#timer-bar {
+/* Khối dính: timer + panel theo dõi cùng bám đầu trang khi cuộn */
+.quiz-sticky {
   position: sticky; top: 12px; z-index: 20;
+  margin-bottom: 20px;
+  animation: fadeUp .4s ease both;
+}
+#timer-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
   background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: var(--shadow); padding: 12px 18px; margin-bottom: 20px;
-  animation: fadeUp .4s ease both;
+  box-shadow: var(--shadow); padding: 12px 18px; margin-bottom: 10px;
 }
 .timer-left { display: flex; align-items: center; gap: 11px; }
 .timer-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgba(22,163,74,.15); }
@@ -155,14 +159,22 @@ input:focus {
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 
 /* ---------- Nav panel (theo dõi câu đã làm) ---------- */
-.nav-panel { padding: 16px 18px; margin-bottom: 18px; animation: fadeUp .4s ease .05s both; }
+.nav-panel { padding: 14px 18px; margin-bottom: 0; }
 .nav-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .nav-title { font-size: 14px; font-weight: 700; }
+.nav-toggle {
+  font-family: inherit; font-size: 14px; cursor: pointer; margin-left: auto;
+  width: 30px; height: 30px; border: 1.5px solid var(--line); background: #fff; border-radius: 8px;
+  color: var(--muted); transition: transform .2s, background .12s;
+}
+.nav-toggle:hover { background: #f3f4f6; }
+.nav-panel.collapsed .nav-grid { display: none; }
+.nav-panel.collapsed .nav-toggle { transform: rotate(-90deg); }
 .nav-legend { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--muted); font-weight: 600; }
 .nav-legend .lg { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
 .nav-legend .lg-done { background: var(--brand); }
 .nav-legend .lg-todo { background: #fff; border: 1.5px solid var(--line); }
-.nav-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+.nav-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; max-height: 208px; overflow-y: auto; }
 .nav-cell {
   font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
   aspect-ratio: 1; display: flex; align-items: center; justify-content: center;

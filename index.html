@@ -37,28 +37,31 @@
 
   <!-- Màn 2: làm bài -->
   <section id="screen-quiz" class="screen hidden">
-    <div id="timer-bar">
-      <div class="timer-left">
-        <span class="timer-dot"></span>
-        <div>
-          <div class="timer-caption">Thời gian còn lại</div>
-          <span id="timer" class="timer-clock">60:00</span>
+    <div class="quiz-sticky">
+      <div id="timer-bar">
+        <div class="timer-left">
+          <span class="timer-dot"></span>
+          <div>
+            <div class="timer-caption">Thời gian còn lại</div>
+            <span id="timer" class="timer-clock">60:00</span>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+          <span id="progress" class="progress-text"></span>
         </div>
       </div>
-      <div class="progress-wrap">
-        <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
-        <span id="progress" class="progress-text"></span>
+      <div id="nav-panel" class="card nav-panel">
+        <div class="nav-head">
+          <span class="nav-title">Theo dõi bài làm</span>
+          <span class="nav-legend">
+            <span class="lg lg-done"></span> Đã làm
+            <span class="lg lg-todo"></span> Chưa làm
+          </span>
+          <button type="button" id="nav-toggle" class="nav-toggle" aria-label="Thu gọn">▾</button>
+        </div>
+        <div id="nav-grid" class="nav-grid"></div>
       </div>
-    </div>
-    <div id="nav-panel" class="card nav-panel">
-      <div class="nav-head">
-        <span class="nav-title">Theo dõi bài làm</span>
-        <span class="nav-legend">
-          <span class="lg lg-done"></span> Đã làm
-          <span class="lg lg-todo"></span> Chưa làm
-        </span>
-      </div>
-      <div id="nav-grid" class="nav-grid"></div>
     </div>
     <form id="quiz-form">
       <div id="questions"></div>

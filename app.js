@@ -53,6 +53,7 @@ function renderNav() {
     const el = document.querySelector(`.q[data-num="${num}"]`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
+  $('nav-toggle').addEventListener('click', () => $('nav-panel').classList.toggle('collapsed'));
 }
 
 function isAnswered(number) {
