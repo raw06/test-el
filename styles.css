@@ -127,16 +127,21 @@ input:focus {
 .btn-lg { padding: 15px 40px; font-size: 17px; }
 
 /* ---------- Timer bar ---------- */
-/* Khối dính: timer + panel theo dõi cùng bám đầu trang khi cuộn */
+/* Bố cục 2 cột khi làm bài: sidebar trái + câu hỏi phải */
+#screen-quiz.quiz-layout { max-width: 1040px; }
+.quiz-layout {
+  display: grid; grid-template-columns: 264px minmax(0, 1fr); gap: 24px;
+  align-items: start;
+}
+/* Khối dính bên trái: timer + panel theo dõi bám đầu trang khi cuộn */
 .quiz-sticky {
   position: sticky; top: 12px; z-index: 20;
-  margin-bottom: 20px;
   animation: fadeUp .4s ease both;
 }
 #timer-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 12px;
   background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: var(--shadow); padding: 12px 18px; margin-bottom: 10px;
+  box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 12px;
 }
 .timer-left { display: flex; align-items: center; gap: 11px; }
 .timer-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgba(22,163,74,.15); }
@@ -151,7 +156,8 @@ input:focus {
   transition: width .4s cubic-bezier(.34,1.2,.64,1);
   animation: shimmer 2.4s linear infinite;
 }
-.progress-text { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 5px; text-align: right; }
+.progress-text { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 5px; text-align: left; }
+.progress-wrap { max-width: none; }
 
 #timer-bar.warn { background: var(--warn-bg); border-color: var(--warn-line); }
 #timer-bar.warn .timer-dot { background: var(--warn-ink); box-shadow: 0 0 0 4px rgba(220,38,38,.15); animation: pulse 1s infinite; }
@@ -174,7 +180,7 @@ input:focus {
 .nav-legend .lg { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
 .nav-legend .lg-done { background: var(--brand); }
 .nav-legend .lg-todo { background: #fff; border: 1.5px solid var(--line); }
-.nav-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; max-height: 208px; overflow-y: auto; }
+.nav-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: calc(100vh - 300px); overflow-y: auto; }
 .nav-cell {
   font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
   aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
@@ -183,7 +189,13 @@ input:focus {
 }
 .nav-cell:hover { border-color: var(--brand); transform: translateY(-1px); }
 .nav-cell.done { background: var(--brand); border-color: var(--brand); color: #fff; }
-@media (max-width: 560px) { .nav-grid { grid-template-columns: repeat(8, 1fr); } }
+/* Màn hẹp: xếp 1 cột, sidebar dính trên đầu (như cũ) */
+@media (max-width: 860px) {
+  .quiz-layout { grid-template-columns: 1fr; gap: 0; }
+  .quiz-sticky { margin-bottom: 20px; }
+  #timer-bar { flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; }
+  .nav-grid { grid-template-columns: repeat(10, 1fr); max-height: 200px; }
+}
 
 /* ---------- Questions ---------- */
 .q {
