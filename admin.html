@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quản trị — Bài kiểm tra</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <!-- Cổng đăng nhập -->
+  <section id="screen-login" class="screen">
+    <div class="card intro-card">
+      <span class="badge">Khu vực giáo viên</span>
+      <h1>Đăng nhập quản trị</h1>
+      <p class="lead">Nhập mật khẩu quản trị để quản lý đề bài và xem kết quả.</p>
+      <form id="login-form">
+        <label class="field">
+          <span class="field-label">Mật khẩu quản trị <em>*</em></span>
+          <input id="admin-token" type="password" required placeholder="••••••••" autocomplete="current-password" />
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+      </form>
+      <p class="err" id="login-err"></p>
+      <p class="muted small"><a href="index.html">← Về trang làm bài</a></p>
+    </div>
+  </section>
+
+  <!-- Bảng điều khiển -->
+  <section id="screen-admin" class="screen wide hidden">
+    <header class="admin-head">
+      <h1>Quản trị bài kiểm tra</h1>
+      <button id="logout-btn" class="btn btn-ghost">Đăng xuất</button>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="questions">📝 Câu hỏi</button>
+      <button class="tab" data-tab="results">📊 Kết quả</button>
+    </nav>
+
+    <!-- Tab câu hỏi -->
+    <div id="tab-questions" class="tab-panel">
+      <div class="card toolbar">
+        <div class="toolbar-row">
+          <button id="add-q-btn" class="btn btn-primary">+ Thêm câu hỏi</button>
+          <span class="sep"></span>
+          <label class="btn btn-outline file-btn">
+            ⬆️ Thay đề bằng CSV
+            <input id="csv-input" type="file" accept=".csv,text/csv" hidden />
+          </label>
+          <a href="mau-de.csv" id="csv-template" class="link-sm" download>Tải CSV mẫu</a>
+          <span class="grow"></span>
+          <span id="q-count" class="muted small"></span>
+        </div>
+        <p class="hint">CSV cần các cột: <code>number, content, option_a, option_b, option_c, option_d, correct</code> (correct = A/B/C/D). Upload sẽ <b>thay toàn bộ</b> đề hiện tại.</p>
+      </div>
+      <div id="q-list" class="q-list"></div>
+    </div>
+
+    <!-- Tab kết quả -->
+    <div id="tab-results" class="tab-panel hidden">
+      <div class="card toolbar">
+        <div class="toolbar-row">
+          <button id="reload-subs-btn" class="btn btn-outline">↻ Tải lại</button>
+          <button id="download-xlsx-btn" class="btn btn-primary">⬇️ Tải Excel (.xlsx)</button>
+          <button id="clear-subs-btn" class="btn btn-danger">🗑️ Xoá tất cả kết quả</button>
+          <span class="grow"></span>
+          <span id="sub-count" class="muted small"></span>
+        </div>
+      </div>
+      <div class="card table-card">
+        <table id="subs-table">
+          <thead><tr><th>#</th><th>Họ và tên</th><th>Lớp</th><th>Điểm</th><th>Thời gian nộp</th></tr></thead>
+          <tbody id="subs-body"></tbody>
+        </table>
+        <p id="subs-empty" class="muted center hidden">Chưa có học sinh nào nộp bài.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal sửa/thêm câu hỏi -->
+  <div id="q-modal" class="modal hidden">
+    <div class="modal-box card">
+      <h3 id="q-modal-title">Thêm câu hỏi</h3>
+      <form id="q-form">
+        <input type="hidden" id="q-orig-number" />
+        <label class="field">
+          <span class="field-label">Số thứ tự câu <em>*</em></span>
+          <input id="q-number" type="number" min="1" required />
+        </label>
+        <label class="field">
+          <span class="field-label">Nội dung câu hỏi <em>*</em></span>
+          <textarea id="q-content" rows="2" required></textarea>
+        </label>
+        <div class="opt-grid">
+          <label class="field"><span class="field-label">Đáp án A <em>*</em></span><input id="q-a" required /></label>
+          <label class="field"><span class="field-label">Đáp án B <em>*</em></span><input id="q-b" required /></label>
+          <label class="field"><span class="field-label">Đáp án C <em>*</em></span><input id="q-c" required /></label>
+          <label class="field"><span class="field-label">Đáp án D <em>*</em></span><input id="q-d" required /></label>
+        </div>
+        <label class="field">
+          <span class="field-label">Đáp án đúng <em>*</em></span>
+          <select id="q-correct" required>
+            <option value="A">A</option><option value="B">B</option>
+            <option value="C">C</option><option value="D">D</option>
+          </select>
+        </label>
+        <p class="err" id="q-form-err"></p>
+        <div class="modal-actions">
+          <button type="button" id="q-cancel" class="btn btn-ghost">Huỷ</button>
+          <button type="submit" class="btn btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
