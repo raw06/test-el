@@ -17,7 +17,13 @@ function toast(msg, kind = 'ok') {
 async function api(action, extra = {}) {
   const res = await fetch(FN_BASE + "/admin", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-admin-token": token },
+    headers: {
+      "Content-Type": "application/json",
+      // anon key thoả mãn gateway JWT của Supabase; quyền admin thật do x-admin-token kiểm.
+      "Authorization": "Bearer " + window.SUPABASE_ANON_KEY,
+      "apikey": window.SUPABASE_ANON_KEY,
+      "x-admin-token": token,
+    },
     body: JSON.stringify({ action, ...extra }),
   });
   let body = {};
