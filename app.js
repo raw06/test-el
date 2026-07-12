@@ -1,20 +1,67 @@
 const sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 const DURATION_SEC = 60 * 60;
-let questions = [], timerId = null, student = null, submitted = false;
+const STORAGE_KEY = 'quiz_state_v1';
+let questions = [], timerId = null, student = null, submitted = false, deadline = 0;
 
 const $ = (id) => document.getElementById(id);
 const show = (id) => { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); $(id).classList.remove('hidden'); };
+
+// ---- Lưu / khôi phục phiên làm bài ----
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+}
+function saveState() {
+  if (!student) return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    name: student.name, cls: student.cls, deadline, answers: collectAnswers(),
+  }));
+}
+function clearState() { localStorage.removeItem(STORAGE_KEY); }
+
+function collectAnswers() {
+  const a = {};
+  questions.forEach(q => {
+    const sel = $('quiz-form').querySelector(`input[name="q${q.number}"]:checked`);
+    if (sel) a[q.number] = sel.value;
+  });
+  return a;
+}
+// Đánh dấu lại các đáp án đã lưu lên radio + class trạng thái.
+function applyAnswers(answers) {
+  if (!answers) return;
+  Object.entries(answers).forEach(([num, val]) => {
+    const input = $('quiz-form').querySelector(`input[name="q${num}"][value="${val}"]`);
+    if (input) { input.checked = true; input.closest('.q')?.classList.add('answered'); }
+  });
+}
 
 $('info-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = $('full-name').value.trim(), cls = $('class-name').value.trim();
   if (!name || !cls) return;
   student = { name, cls };
+  deadline = Date.now() + DURATION_SEC * 1000; // mốc kết thúc tuyệt đối
   await loadQuestions();
   renderQuiz();
+  saveState();
   show('screen-quiz');
   startTimer();
 });
+
+// Khi load trang: nếu có phiên đang dở thì khôi phục.
+async function init() {
+  const s = loadState();
+  if (!s || !s.name || !s.deadline) return; // chưa có phiên -> ở màn nhập thông tin
+  student = { name: s.name, cls: s.cls };
+  deadline = s.deadline;
+  try { await loadQuestions(); } catch { return; }
+  renderQuiz();
+  applyAnswers(s.answers);
+  updateProgress();
+  show('screen-quiz');
+  if (Date.now() >= deadline) { doSubmit(true); return; } // hết giờ khi vắng mặt -> nộp luôn
+  startTimer();
+}
 
 async function loadQuestions() {
   const { data, error } = await sb.from('questions_public').select('*').order('number');
@@ -39,6 +86,7 @@ function renderQuiz() {
     const q = e.target.closest('.q');
     if (q) { q.classList.add('answered'); q.classList.remove('missing'); }
     updateProgress();
+    saveState();
   });
 }
 
@@ -74,13 +122,13 @@ function updateProgress() {
 }
 
 function startTimer() {
-  let left = DURATION_SEC;
+  clearInterval(timerId);
   const tick = () => {
+    const left = Math.max(0, Math.round((deadline - Date.now()) / 1000));
     const m = String(Math.floor(left / 60)).padStart(2, '0'), s = String(left % 60).padStart(2, '0');
     $('timer').textContent = `${m}:${s}`;
     $('timer-bar').classList.toggle('warn', left <= 300);
     if (left <= 0) { clearInterval(timerId); doSubmit(true); return; }
-    left--;
   };
   tick(); timerId = setInterval(tick, 1000);
 }
@@ -120,6 +168,7 @@ async function doSubmit(auto) {
     p_full_name: student.name, p_class: student.cls, p_answers: answers,
   });
   if (error) { alert('Lỗi nộp bài: ' + error.message); submitted = false; $('submit-btn').disabled = false; return; }
+  clearState();
   renderResult(data.score, data.total, auto);
   show('screen-result');
 }
@@ -165,3 +214,6 @@ function celebrate() {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
+
+// Khôi phục phiên làm bài (nếu có) khi tải trang.
+init();
