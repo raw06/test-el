@@ -70,7 +70,7 @@
       </div>
       <div class="card table-card">
         <table id="subs-table">
-          <thead><tr><th>#</th><th>Họ và tên</th><th>Lớp</th><th>Điểm</th><th>Thời gian nộp</th></tr></thead>
+          <thead><tr><th>#</th><th>Họ và tên</th><th>Lớp</th><th>Điểm</th><th>Thời gian nộp</th><th></th></tr></thead>
           <tbody id="subs-body"></tbody>
         </table>
         <p id="subs-empty" class="muted center hidden">Chưa có học sinh nào nộp bài.</p>
@@ -111,6 +111,23 @@
           <button type="submit" class="btn btn-primary">Lưu</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal chi tiết bài làm của học sinh -->
+  <div id="detail-modal" class="modal hidden">
+    <div class="modal-box card detail-box">
+      <header class="detail-head">
+        <div>
+          <h3 id="detail-title">Chi tiết bài làm</h3>
+          <p id="detail-sub" class="muted small"></p>
+        </div>
+        <button type="button" id="detail-close" class="btn btn-ghost">Đóng</button>
+      </header>
+      <div class="detail-filter">
+        <label class="chk"><input type="checkbox" id="only-wrong" /> Chỉ hiện câu sai</label>
+      </div>
+      <div id="detail-list" class="detail-list"></div>
     </div>
   </div>
 

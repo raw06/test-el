@@ -1,6 +1,7 @@
 const FN_BASE = window.SUPABASE_URL + "/functions/v1";
 let token = sessionStorage.getItem("admin_token") || "";
 let questionsCache = [];
+let submissionsCache = [];
 
 const $ = (id) => document.getElementById(id);
 const show = (id) => { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); $(id).classList.remove('hidden'); };
@@ -173,6 +174,7 @@ async function loadSubmissions() {
   try {
     const { submissions } = await api('list_submissions');
     const rows = submissions || [];
+    submissionsCache = rows;
     $('sub-count').textContent = `${rows.length} lượt nộp`;
     $('subs-empty').classList.toggle('hidden', rows.length > 0);
     $('subs-body').innerHTML = rows.map(r => `<tr>
@@ -181,11 +183,84 @@ async function loadSubmissions() {
       <td>${esc(r.class_name)}</td>
       <td class="score">${r.score}/${r.total}</td>
       <td>${new Date(r.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</td>
+      <td><button class="icon-btn" data-view="${r.id}">Xem bài</button></td>
     </tr>`).join('');
   } catch (err) { toast(err.message, 'bad'); }
 }
 
 $('reload-subs-btn').addEventListener('click', loadSubmissions);
+
+/* ---------- Modal chi tiết bài làm ---------- */
+let detailSub = null; // bài đang mở
+
+// Uỷ quyền: click "Xem bài" ở bảng kết quả.
+$('subs-body').addEventListener('click', (e) => {
+  const id = e.target.dataset.view;
+  if (!id) return;
+  const sub = submissionsCache.find(s => String(s.id) === id);
+  if (sub) openDetail(sub);
+});
+
+function openDetail(sub) {
+  detailSub = sub;
+  $('detail-title').textContent = `Bài làm — ${sub.full_name}`;
+  const wrong = questionsCache.filter(q => {
+    const ans = (sub.answers || {})[q.number];
+    return String(ans || '').toUpperCase() !== q.correct_answer;
+  }).length;
+  $('detail-sub').textContent =
+    `${esc(sub.class_name)} · Điểm ${sub.score}/${sub.total} · Sai ${wrong} câu`;
+  $('only-wrong').checked = false;
+  renderDetail();
+  $('detail-modal').classList.remove('hidden');
+}
+
+function renderDetail() {
+  if (!detailSub) return;
+  const answers = detailSub.answers || {};
+  const onlyWrong = $('only-wrong').checked;
+  const items = questionsCache.map(q => {
+    const chosen = String(answers[q.number] || '').toUpperCase();
+    const isRight = chosen === q.correct_answer;
+    const blank = !chosen;
+    return { q, chosen, isRight, blank };
+  }).filter(it => !onlyWrong || !it.isRight);
+
+  if (!items.length) {
+    $('detail-list').innerHTML = `<p class="muted center">${onlyWrong ? 'Không có câu sai nào 🎉' : 'Bài làm trống.'}</p>`;
+    return;
+  }
+
+  $('detail-list').innerHTML = items.map(({ q, chosen, isRight, blank }) => {
+    const opts = ['a','b','c','d'].map(o => {
+      const L = o.toUpperCase();
+      const cls = [];
+      if (L === q.correct_answer) cls.push('is-correct');   // đáp án đúng
+      if (L === chosen && !isRight) cls.push('is-chosen-wrong'); // HS chọn sai
+      if (L === chosen && isRight) cls.push('is-chosen-right');  // HS chọn đúng
+      return `<div class="det-opt ${cls.join(' ')}">
+        <span class="det-key">${L}</span>
+        <span class="det-text">${esc(q['option_' + o])}</span>
+      </div>`;
+    }).join('');
+    const tag = isRight
+      ? '<span class="det-badge ok">Đúng</span>'
+      : (blank ? '<span class="det-badge blank">Bỏ trống</span>'
+               : '<span class="det-badge bad">Sai</span>');
+    return `<div class="det-q ${isRight ? '' : 'is-wrong'}">
+      <div class="det-q-head">
+        <span class="det-num">Câu ${q.number}</span>${tag}
+        <span class="det-meta">HS chọn: <b>${chosen || '—'}</b> · Đúng: <b>${q.correct_answer}</b></span>
+      </div>
+      <div class="det-stem">${esc(q.content)}</div>
+      <div class="det-opts">${opts}</div>
+    </div>`;
+  }).join('');
+}
+
+$('only-wrong').addEventListener('change', renderDetail);
+$('detail-close').addEventListener('click', () => $('detail-modal').classList.add('hidden'));
+$('detail-modal').addEventListener('click', (e) => { if (e.target.id === 'detail-modal') $('detail-modal').classList.add('hidden'); });
 
 $('clear-subs-btn').addEventListener('click', async () => {
   if (!confirm('Xoá TẤT CẢ kết quả học sinh? Không thể hoàn tác.')) return;

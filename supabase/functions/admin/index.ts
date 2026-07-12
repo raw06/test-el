@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
 
       case "list_submissions": {
         const { data, error } = await sb.from("submissions")
-          .select("id, full_name, class_name, score, total, created_at")
+          .select("id, full_name, class_name, score, total, answers, created_at")
           .order("id", { ascending: false });
         if (error) throw error;
         return json({ submissions: data });

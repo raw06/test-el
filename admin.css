@@ -81,6 +81,38 @@ textarea:focus, select:focus { outline: none; border-color: var(--brand); backgr
 .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 
+/* Modal chi tiết bài làm */
+.detail-box { max-width: 680px; }
+.detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.detail-head h3 { margin: 0 0 2px; }
+.detail-filter { margin: 4px 0 14px; }
+.chk { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.chk input { width: 16px; height: 16px; accent-color: var(--brand); }
+
+.detail-list { display: flex; flex-direction: column; gap: 12px; max-height: 62vh; overflow: auto; padding-right: 4px; }
+.det-q { border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.det-q.is-wrong { border-color: var(--warn-line); background: var(--warn-bg); }
+.det-q-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.det-num { font-weight: 700; color: var(--ink); }
+.det-meta { font-size: 13px; color: var(--muted); margin-left: auto; }
+.det-badge { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
+.det-badge.ok { background: #dcfce7; color: #15803d; }
+.det-badge.bad { background: var(--warn-bg); color: var(--warn-ink); }
+.det-badge.blank { background: #f3f4f6; color: var(--muted); }
+.det-stem { font-weight: 600; margin-bottom: 8px; }
+.det-opts { display: flex; flex-direction: column; gap: 5px; }
+.det-opt { display: flex; align-items: center; gap: 10px; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1.5px solid transparent; }
+.det-key { flex: none; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; border-radius: 6px; background: #f3f4f6; color: var(--muted); }
+.det-opt.is-correct { background: #f0fdf4; border-color: #86efac; }
+.det-opt.is-correct .det-key { background: var(--ok); color: #fff; }
+.det-opt.is-chosen-wrong { background: var(--warn-bg); border-color: var(--warn-line); }
+.det-opt.is-chosen-wrong .det-key { background: var(--warn-ink); color: #fff; }
+.det-opt.is-chosen-right { font-weight: 600; }
+
+@media (max-width: 640px) {
+  .det-meta { margin-left: 0; width: 100%; }
+}
+
 /* Toast */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
