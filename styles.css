@@ -36,7 +36,7 @@ body {
 }
 
 .screen { max-width: 720px; margin: 0 auto; }
-.screen.hidden { display: none; }
+.hidden { display: none !important; }
 
 .muted { color: var(--muted); font-weight: 400; }
 
@@ -153,6 +153,25 @@ input:focus {
 #timer-bar.warn .timer-dot { background: var(--warn-ink); box-shadow: 0 0 0 4px rgba(220,38,38,.15); animation: pulse 1s infinite; }
 #timer-bar.warn .timer-clock { color: var(--warn-ink); }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+/* ---------- Nav panel (theo dõi câu đã làm) ---------- */
+.nav-panel { padding: 16px 18px; margin-bottom: 18px; animation: fadeUp .4s ease .05s both; }
+.nav-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.nav-title { font-size: 14px; font-weight: 700; }
+.nav-legend { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.nav-legend .lg { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
+.nav-legend .lg-done { background: var(--brand); }
+.nav-legend .lg-todo { background: #fff; border: 1.5px solid var(--line); }
+.nav-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+.nav-cell {
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted);
+  transition: transform .1s, background .12s, border-color .12s, color .12s;
+}
+.nav-cell:hover { border-color: var(--brand); transform: translateY(-1px); }
+.nav-cell.done { background: var(--brand); border-color: var(--brand); color: #fff; }
+@media (max-width: 560px) { .nav-grid { grid-template-columns: repeat(8, 1fr); } }
 
 /* ---------- Questions ---------- */
 .q {

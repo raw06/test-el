@@ -46,12 +46,9 @@
       <div class="card toolbar">
         <div class="toolbar-row">
           <button id="add-q-btn" class="btn btn-primary">+ Thêm câu hỏi</button>
-          <span class="sep"></span>
-          <label class="btn btn-outline file-btn">
-            ⬆️ Thay đề bằng CSV
-            <input id="csv-input" type="file" accept=".csv,text/csv" hidden />
-          </label>
+          <button id="upload-csv-btn" type="button" class="btn btn-outline">⬆️ Thay đề bằng CSV</button>
           <a href="mau-de.csv" id="csv-template" class="link-sm" download>Tải CSV mẫu</a>
+          <input id="csv-input" type="file" accept=".csv,text/csv" class="hidden" />
           <span class="grow"></span>
           <span id="q-count" class="muted small"></span>
         </div>
@@ -119,6 +116,7 @@
 
   <div id="toast" class="toast hidden"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="config.js"></script>
   <script src="admin.js"></script>
 </body>

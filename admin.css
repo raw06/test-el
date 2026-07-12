@@ -17,7 +17,6 @@ a:hover { text-decoration: underline; }
 .btn-outline:hover { background: var(--brand-soft); }
 .btn-danger { background: #fff; color: var(--warn-ink); border: 1.5px solid var(--warn-line); box-shadow: none; }
 .btn-danger:hover { background: var(--warn-bg); }
-.file-btn { display: inline-flex; align-items: center; cursor: pointer; }
 
 /* Tabs */
 .tabs { display: flex; gap: 6px; margin-bottom: 16px; }

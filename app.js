@@ -33,6 +33,7 @@ function renderQuiz() {
           <span class="opt-text">${escapeHtml(q['option_' + o])}</span>
         </label>`).join('')}
     </div>`).join('');
+  renderNav();
   updateProgress();
   $('quiz-form').addEventListener('change', (e) => {
     const q = e.target.closest('.q');
@@ -41,12 +42,34 @@ function renderQuiz() {
   });
 }
 
+// Lưới số câu để theo dõi + nhảy nhanh tới từng câu.
+function renderNav() {
+  $('nav-grid').innerHTML = questions.map(q =>
+    `<button type="button" class="nav-cell" data-goto="${q.number}">${q.number}</button>`
+  ).join('');
+  $('nav-grid').addEventListener('click', (e) => {
+    const num = e.target.dataset.goto;
+    if (!num) return;
+    const el = document.querySelector(`.q[data-num="${num}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+function isAnswered(number) {
+  return !!$('quiz-form').querySelector(`input[name="q${number}"]:checked`);
+}
+
 function updateProgress() {
-  const answered = questions.filter(q => $('quiz-form').querySelector(`input[name="q${q.number}"]:checked`)).length;
+  const answered = questions.filter(q => isAnswered(q.number)).length;
   const pct = questions.length ? Math.round((answered / questions.length) * 100) : 0;
   $('progress').textContent = `Đã trả lời ${answered}/${questions.length}`;
   const fill = $('progress-fill');
   if (fill) fill.style.width = pct + '%';
+  // Cập nhật màu ô trong lưới theo trạng thái từng câu.
+  questions.forEach(q => {
+    const cell = $('nav-grid').querySelector(`[data-goto="${q.number}"]`);
+    if (cell) cell.classList.toggle('done', isAnswered(q.number));
+  });
 }
 
 function startTimer() {

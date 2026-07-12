@@ -154,6 +154,8 @@ $('q-form').addEventListener('submit', async (e) => {
 });
 
 /* ---------- Upload CSV ---------- */
+$('upload-csv-btn').addEventListener('click', () => $('csv-input').click());
+
 $('csv-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   e.target.value = ''; // cho phép chọn lại cùng file
@@ -199,24 +201,21 @@ $('download-xlsx-btn').addEventListener('click', async () => {
   } catch (err) { toast(err.message, 'bad'); }
 });
 
-// Tạo file .xls (SpreadsheetML) mở được bằng Excel — không cần thư viện ngoài.
+// Tạo file .xlsx thật bằng SheetJS (nạp từ CDN trong admin.html).
 function downloadXlsx(rows) {
-  const head = ['ID', 'Họ và tên', 'Lớp', 'Điểm', 'Tổng', 'Thời gian nộp'];
-  const body = rows.map(r => [
-    r.id, r.full_name, r.class_name, r.score, r.total,
-    new Date(r.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-  ]);
-  const cell = (v) => `<td>${esc(v)}</td>`;
-  const tr = (cells) => `<tr>${cells.map(cell).join('')}</tr>`;
-  const html =
-    `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head><meta charset="utf-8"></head>
-    <body><table border="1">${tr(head)}${body.map(tr).join('')}</table></body></html>`;
-  const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'ket-qua-lam-bai.xls';
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+  if (typeof XLSX === 'undefined') { toast('Chưa tải được thư viện Excel, thử lại.', 'bad'); return; }
+  const data = rows.map(r => ({
+    'ID': r.id,
+    'Họ và tên': r.full_name,
+    'Lớp': r.class_name,
+    'Điểm': r.score,
+    'Tổng': r.total,
+    'Thời gian nộp': new Date(r.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{ wch: 6 }, { wch: 24 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 20 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'KetQua');
+  XLSX.writeFile(wb, 'ket-qua-lam-bai.xlsx');
   toast('Đang tải file kết quả…');
 }
