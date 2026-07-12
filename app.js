@@ -36,7 +36,7 @@ function renderQuiz() {
   updateProgress();
   $('quiz-form').addEventListener('change', (e) => {
     const q = e.target.closest('.q');
-    if (q) q.classList.add('answered');
+    if (q) { q.classList.add('answered'); q.classList.remove('missing'); }
     updateProgress();
   });
 }
@@ -63,11 +63,25 @@ function startTimer() {
 
 $('quiz-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  const answered = questions.filter(q => $('quiz-form').querySelector(`input[name="q${q.number}"]:checked`)).length;
-  if (answered < questions.length &&
-      !confirm(`Bạn mới trả lời ${answered}/${questions.length} câu. Nộp bài luôn?`)) return;
+  const unanswered = questions.filter(q => !$('quiz-form').querySelector(`input[name="q${q.number}"]:checked`));
+  if (unanswered.length > 0) {
+    // Bắt buộc làm hết mới cho nộp (trừ khi hết giờ — xử lý ở startTimer)
+    markUnanswered(unanswered);
+    alert(`Bạn còn ${unanswered.length} câu chưa trả lời. Vui lòng làm hết tất cả các câu trước khi nộp bài.`);
+    const first = document.querySelector(`.q[data-num="${unanswered[0].number}"]`);
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
   doSubmit(false);
 });
+
+// Đánh dấu đỏ các câu chưa trả lời; tự bỏ đánh dấu khi học sinh chọn đáp án
+function markUnanswered(list) {
+  list.forEach(q => {
+    const el = document.querySelector(`.q[data-num="${q.number}"]`);
+    if (el) el.classList.add('missing');
+  });
+}
 
 async function doSubmit(auto) {
   if (submitted) return; submitted = true;

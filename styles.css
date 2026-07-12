@@ -163,6 +163,19 @@ input:focus {
   animation-delay: calc(var(--i, 0) * 28ms);
 }
 .q.answered { border-color: #c7d2fe; }
+.q.missing { border-color: var(--warn-line); background: var(--warn-bg); animation: shake .4s ease; }
+.q.missing .stem::after {
+  content: "Chưa trả lời"; display: inline-block; margin-left: 10px;
+  font-size: 12px; font-weight: 700; color: var(--warn-ink);
+  background: #fff; border: 1px solid var(--warn-line); border-radius: 999px; padding: 2px 9px;
+  vertical-align: 2px;
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
 .q .stem { font-weight: 600; font-size: 16px; margin-bottom: 14px; }
 .q .stem .num {
   display: inline-flex; align-items: center; justify-content: center;
