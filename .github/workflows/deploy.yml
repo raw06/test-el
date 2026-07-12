@@ -13,6 +13,7 @@ jobs:
         run: |
           mkdir -p public
           cp index.html styles.css app.js config.js public/
+          cp admin.html admin.css admin.js mau-de.csv public/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: public }
