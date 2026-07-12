@@ -17,6 +17,10 @@
 
 * { box-sizing: border-box; }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -36,6 +40,26 @@ body {
 
 .muted { color: var(--muted); font-weight: 400; }
 
+/* ---------- Keyframes ---------- */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(.6); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes checkDraw {
+  0% { transform: scale(.2) rotate(-25deg); opacity: 0; }
+  55% { transform: scale(1.15) rotate(0); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes floatUp {
+  0% { opacity: 0; transform: translateY(10px) scale(.9); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-46px) scale(1.1); }
+}
+
 /* ---------- Card ---------- */
 .card {
   background: var(--card);
@@ -46,7 +70,12 @@ body {
 }
 
 /* ---------- Intro ---------- */
-.intro-card { text-align: left; }
+.intro-card { text-align: left; animation: fadeUp .5s ease both; }
+.intro-card .badge { animation: popIn .5s ease .05s both; }
+.intro-card h1 { animation: fadeUp .5s ease .1s both; }
+.intro-card .meta-row { animation: fadeUp .5s ease .18s both; }
+.intro-card .lead { animation: fadeUp .5s ease .26s both; }
+.intro-card #info-form { animation: fadeUp .5s ease .34s both; }
 .badge {
   display: inline-block;
   font-size: 12px;
@@ -88,11 +117,11 @@ input:focus {
 .btn {
   font-family: inherit; font-size: 16px; font-weight: 600;
   border: none; border-radius: 12px; cursor: pointer;
-  padding: 13px 22px; transition: transform .05s, box-shadow .15s, background .15s;
+  padding: 13px 22px; transition: transform .12s cubic-bezier(.34,1.56,.64,1), box-shadow .15s, background .15s;
 }
-.btn:active { transform: translateY(1px); }
+.btn:active { transform: translateY(1px) scale(.98); }
 .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 4px 14px rgba(79, 70, 229, .28); }
-.btn-primary:hover { background: var(--brand-dark); }
+.btn-primary:hover { background: var(--brand-dark); transform: translateY(-2px); box-shadow: 0 8px 22px rgba(79, 70, 229, .36); }
 .btn-primary:disabled { opacity: .6; cursor: not-allowed; box-shadow: none; }
 .btn-block { width: 100%; }
 .btn-lg { padding: 15px 40px; font-size: 17px; }
@@ -103,6 +132,7 @@ input:focus {
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
   background: var(--card); border: 1px solid var(--line); border-radius: 14px;
   box-shadow: var(--shadow); padding: 12px 18px; margin-bottom: 20px;
+  animation: fadeUp .4s ease both;
 }
 .timer-left { display: flex; align-items: center; gap: 11px; }
 .timer-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgba(22,163,74,.15); }
@@ -110,7 +140,13 @@ input:focus {
 .timer-clock { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .progress-wrap { flex: 1; max-width: 320px; }
 .progress-track { height: 8px; background: #eceef5; border-radius: 999px; overflow: hidden; }
-.progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 999px; transition: width .3s ease; }
+.progress-fill {
+  height: 100%; width: 0; border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #818cf8, #4f46e5);
+  background-size: 200% 100%;
+  transition: width .4s cubic-bezier(.34,1.2,.64,1);
+  animation: shimmer 2.4s linear infinite;
+}
 .progress-text { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 5px; text-align: right; }
 
 #timer-bar.warn { background: var(--warn-bg); border-color: var(--warn-line); }
@@ -122,7 +158,9 @@ input:focus {
 .q {
   background: var(--card); border: 1px solid var(--line); border-radius: 14px;
   box-shadow: var(--shadow); padding: 20px 22px; margin-bottom: 14px;
-  transition: border-color .15s, box-shadow .15s;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+  animation: fadeUp .45s ease both;
+  animation-delay: calc(var(--i, 0) * 28ms);
 }
 .q.answered { border-color: #c7d2fe; }
 .q .stem { font-weight: 600; font-size: 16px; margin-bottom: 14px; }
@@ -144,27 +182,41 @@ input:focus {
   display: inline-flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; flex: none;
   font-size: 13px; font-weight: 700; color: var(--muted);
-  border: 1.5px solid var(--line); border-radius: 7px; transition: all .12s;
+  border: 1.5px solid var(--line); border-radius: 7px;
+  transition: color .12s, background .12s, border-color .12s, transform .18s cubic-bezier(.34,1.56,.64,1);
 }
 .q .opt:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
-.q .opt:has(input:checked) .opt-key { color: #fff; background: var(--brand); border-color: var(--brand); }
+.q .opt:has(input:checked) .opt-key { color: #fff; background: var(--brand); border-color: var(--brand); transform: scale(1.15); }
 
 /* ---------- Submit row ---------- */
 .submit-row { text-align: center; margin: 28px 0 8px; }
 
 /* ---------- Result ---------- */
-.result-card { text-align: center; padding: 44px 32px; }
+.result-card { text-align: center; padding: 44px 32px; position: relative; overflow: hidden; }
+#screen-result:not(.hidden) .result-card { animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both; }
 .result-check {
+  position: relative;
   width: 72px; height: 72px; margin: 0 auto 20px;
   display: flex; align-items: center; justify-content: center;
   font-size: 38px; color: #fff; background: var(--ok);
   border-radius: 50%; box-shadow: 0 8px 24px rgba(22,163,74,.35);
+  animation: checkDraw .6s cubic-bezier(.34,1.56,.64,1) .15s both;
 }
-.result-card h2 { font-size: 24px; font-weight: 800; margin: 0 0 12px; }
+.result-check::after {
+  content: ""; position: absolute; inset: -8px;
+  border: 3px solid var(--ok); border-radius: 50%; opacity: 0;
+  animation: popIn .6s ease .3s both, fadeIn .6s ease .3s both reverse;
+}
+.result-card h2 { font-size: 24px; font-weight: 800; margin: 0 0 12px; animation: fadeUp .5s ease .35s both; }
 .score-text {
   font-size: 18px; font-weight: 600; margin: 0 0 8px;
   padding: 14px 20px; background: var(--brand-soft); border-radius: 12px; display: inline-block;
+  animation: fadeUp .5s ease .45s both;
 }
+.result-card .muted { animation: fadeUp .5s ease .55s both; }
+
+/* Emoji nổi lên khi điểm cao */
+.burst { position: absolute; top: 40px; font-size: 26px; pointer-events: none; animation: floatUp 1.4s ease forwards; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 560px) {

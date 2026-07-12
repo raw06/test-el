@@ -23,8 +23,8 @@ async function loadQuestions() {
 }
 
 function renderQuiz() {
-  $('questions').innerHTML = questions.map(q => `
-    <div class="q" data-num="${q.number}">
+  $('questions').innerHTML = questions.map((q, i) => `
+    <div class="q" data-num="${q.number}" style="--i:${i}">
       <div class="stem"><span class="num">${q.number}</span>${escapeHtml(q.content)}</div>
       ${['a','b','c','d'].map(o => `
         <label class="opt">
@@ -82,9 +82,46 @@ async function doSubmit(auto) {
     p_full_name: student.name, p_class: student.cls, p_answers: answers,
   });
   if (error) { alert('Lỗi nộp bài: ' + error.message); submitted = false; $('submit-btn').disabled = false; return; }
-  $('score-text').textContent = `${student.name} (${student.cls}) — Điểm: ${data.score}/${data.total}`;
-  if (auto) alert('Hết giờ! Bài đã được nộp tự động.');
+  renderResult(data.score, data.total, auto);
   show('screen-result');
+}
+
+function renderResult(score, total, auto) {
+  const pct = total ? score / total : 0;
+  const msg = resultMessage(score, total, pct);
+  $('result-emoji').textContent = msg.emoji;
+  $('result-title').textContent = msg.title;
+  $('score-text').innerHTML =
+    `Chào <b>${escapeHtml(student.name)}</b> (lớp ${escapeHtml(student.cls)})<br>` +
+    `Bạn đúng <b>${score}/${total}</b> câu — ${msg.line}`;
+  $('result-note').textContent = auto
+    ? 'Đã hết giờ nên bài được nộp tự động. Bạn có thể đóng trang này.'
+    : 'Kết quả đã được ghi nhận. Bạn có thể đóng trang này.';
+  if (pct >= 0.8) celebrate();
+}
+
+// Thông báo điểm thân thiện theo mức làm được
+function resultMessage(score, total, pct) {
+  if (pct >= 0.9) return { emoji: '🏆', title: 'Xuất sắc!', line: 'quá đỉnh, giữ phong độ nhé! 🎉' };
+  if (pct >= 0.8) return { emoji: '🌟', title: 'Làm tốt lắm!', line: 'kết quả rất đáng khen 👏' };
+  if (pct >= 0.65) return { emoji: '👍', title: 'Khá lắm!', line: 'chỉ cần cố thêm chút nữa thôi.' };
+  if (pct >= 0.5) return { emoji: '🙂', title: 'Cũng ổn!', line: 'ôn thêm vài thì động từ là ngon ngay.' };
+  return { emoji: '💪', title: 'Cố lên nhé!', line: 'đừng nản, luyện thêm rồi sẽ tiến bộ.' };
+}
+
+// Emoji bay lên ăn mừng khi điểm cao
+function celebrate() {
+  const card = document.querySelector('.result-card');
+  const icons = ['🎉', '✨', '🎊', '⭐', '💫'];
+  for (let i = 0; i < 12; i++) {
+    const s = document.createElement('span');
+    s.className = 'burst';
+    s.textContent = icons[i % icons.length];
+    s.style.left = (8 + Math.floor((i / 12) * 84)) + '%';
+    s.style.animationDelay = (i * 60) + 'ms';
+    card.appendChild(s);
+    setTimeout(() => s.remove(), 1600 + i * 60);
+  }
 }
 
 function escapeHtml(s) {
