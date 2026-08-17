@@ -135,6 +135,29 @@ Deno.serve(async (req) => {
         return json({ ok: true, count: questions.length });
       }
 
+      case "get_settings": {
+        const { data, error } = await sb.from("settings")
+          .select("title, subtitle, duration_min").eq("id", 1).maybeSingle();
+        if (error) throw error;
+        // Dòng id=1 do schema.sql tạo; nếu thiếu thì trả mặc định để form vẫn dùng được.
+        return json({ settings: data ?? { title: "Bài kiểm tra", subtitle: "", duration_min: 60 } });
+      }
+
+      case "save_settings": {
+        const s = payload.settings ?? {};
+        const title = String(s.title ?? "").trim();
+        const subtitle = String(s.subtitle ?? "").trim();
+        const duration = parseInt(s.duration_min, 10);
+        if (!title) throw new Error("Tên bài kiểm tra không được để trống.");
+        if (!Number.isInteger(duration) || duration < 1 || duration > 600) {
+          throw new Error("Thời lượng phải là số nguyên từ 1 đến 600 phút.");
+        }
+        const { error } = await sb.from("settings")
+          .upsert({ id: 1, title, subtitle, duration_min: duration }, { onConflict: "id" });
+        if (error) throw error;
+        return json({ ok: true });
+      }
+
       case "list_submissions": {
         const { data, error } = await sb.from("submissions")
           .select("id, full_name, class_name, score, total, answers, created_at")

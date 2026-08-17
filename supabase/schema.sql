@@ -10,6 +10,15 @@ create table if not exists public.questions (
   correct_answer char(1) not null check (correct_answer in ('A','B','C','D'))
 );
 
+-- ===== Bảng cấu hình bài kiểm tra (đúng 1 dòng, id = 1) =====
+create table if not exists public.settings (
+  id           int primary key default 1 check (id = 1),
+  title        text not null default 'Bài kiểm tra',
+  subtitle     text not null default '',
+  duration_min int  not null default 60 check (duration_min between 1 and 600)
+);
+insert into public.settings (id) values (1) on conflict (id) do nothing;
+
 -- ===== Bảng kết quả =====
 create table if not exists public.submissions (
   id         bigint generated always as identity primary key,
@@ -27,12 +36,18 @@ create or replace view public.questions_public as
   from public.questions
   order by number;
 
+-- ===== View công khai: cấu hình bài kiểm tra =====
+create or replace view public.settings_public as
+  select title, subtitle, duration_min from public.settings where id = 1;
+
 -- ===== RLS =====
 alter table public.questions   enable row level security;
 alter table public.submissions enable row level security;
--- Không tạo policy nào cho anon trên 2 bảng gốc => anon KHÔNG select/insert trực tiếp được.
+alter table public.settings    enable row level security;
+-- Không tạo policy nào cho anon trên 3 bảng gốc => anon KHÔNG select/insert trực tiếp được.
 -- Cho phép anon đọc view (view chạy quyền owner, đã lọc bỏ đáp án).
 grant select on public.questions_public to anon;
+grant select on public.settings_public  to anon;
 
 -- ===== RPC chấm điểm (chạy quyền definer, thấy đáp án nhưng không trả ra) =====
 create or replace function public.submit_quiz(

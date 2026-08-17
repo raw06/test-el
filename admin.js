@@ -70,8 +70,44 @@ document.querySelectorAll('.tab').forEach(tab => {
     const name = tab.dataset.tab;
     $('tab-questions').classList.toggle('hidden', name !== 'questions');
     $('tab-results').classList.toggle('hidden', name !== 'results');
+    $('tab-settings').classList.toggle('hidden', name !== 'settings');
     if (name === 'results') loadSubmissions();
+    if (name === 'settings') loadSettings();
   });
+});
+
+/* ---------- Cài đặt bài kiểm tra ---------- */
+async function loadSettings() {
+  $('set-err').textContent = '';
+  try {
+    const { settings } = await api('get_settings');
+    $('set-title').value = settings?.title ?? '';
+    $('set-subtitle').value = settings?.subtitle ?? '';
+    $('set-duration').value = settings?.duration_min ?? 60;
+  } catch (err) { toast(err.message, 'bad'); }
+}
+
+$('set-reload-btn').addEventListener('click', loadSettings);
+
+$('settings-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('set-err').textContent = '';
+  const btn = $('set-save-btn');
+  btn.disabled = true;
+  try {
+    await api('save_settings', {
+      settings: {
+        title: $('set-title').value,
+        subtitle: $('set-subtitle').value,
+        duration_min: $('set-duration').value,
+      },
+    });
+    toast('Đã lưu cài đặt');
+  } catch (err) {
+    $('set-err').textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 /* ---------- Câu hỏi ---------- */

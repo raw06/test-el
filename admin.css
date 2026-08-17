@@ -79,6 +79,10 @@ textarea:focus, select:focus { outline: none; border-color: var(--brand); backgr
 .modal-box { width: 100%; max-width: 560px; animation: popIn .3s cubic-bezier(.34,1.56,.64,1) both; }
 .modal-box h3 { margin: 0 0 18px; font-size: 20px; font-weight: 800; }
 .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+
+/* Tab cài đặt: giới hạn bề rộng field trong card 960px cho dễ đọc */
+#settings-form { max-width: 520px; }
+#settings-form #set-duration { max-width: 160px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 
 /* Modal chi tiết bài làm */

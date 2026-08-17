@@ -1,7 +1,9 @@
 const sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-const DURATION_SEC = 60 * 60;
+const DEFAULT_DURATION_SEC = 60 * 60; // dùng khi chưa/không tải được cài đặt
 const STORAGE_KEY = 'quiz_state_v1';
 let questions = [], timerId = null, student = null, submitted = false, deadline = 0;
+let durationSec = DEFAULT_DURATION_SEC; // giáo viên đổi được ở admin.html
+let settingsReady; // promise của loadSettings(), form Bắt đầu chờ nó
 
 const $ = (id) => document.getElementById(id);
 const show = (id) => { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); $(id).classList.remove('hidden'); };
@@ -39,8 +41,9 @@ $('info-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = $('full-name').value.trim(), cls = $('class-name').value.trim();
   if (!name || !cls) return;
+  await settingsReady; // tránh bắt đầu với thời lượng mặc định khi settings chưa về
   student = { name, cls };
-  deadline = Date.now() + DURATION_SEC * 1000; // mốc kết thúc tuyệt đối
+  deadline = Date.now() + durationSec * 1000; // mốc kết thúc tuyệt đối
   await loadQuestions();
   renderQuiz();
   saveState();
@@ -48,8 +51,35 @@ $('info-form').addEventListener('submit', async (e) => {
   startTimer();
 });
 
+// Tên bài + thời lượng do giáo viên đặt ở admin.html; lỗi thì giữ text mặc định trong HTML.
+async function loadSettings() {
+  const { data, error } = await sb.from('settings_public').select('*').maybeSingle();
+  if (error || !data) return;
+  durationSec = data.duration_min * 60;
+  const title = data.title || '';
+  const subtitle = data.subtitle || '';
+  if (title) {
+    $('quiz-title').textContent = title;
+    document.title = subtitle ? `${title} — ${subtitle}` : title;
+  }
+  // Phụ đề rỗng thì ẩn hẳn thay vì để cặp ngoặc trống.
+  $('quiz-subtitle').textContent = subtitle ? `(${subtitle})` : '';
+  $('chip-duration').textContent = `⏱️ ${data.duration_min} phút`;
+}
+
+// Đếm số câu bằng count query (không tải nội dung) để hiện ở màn nhập thông tin.
+async function loadQuestionCount() {
+  const { count, error } = await sb.from('questions_public')
+    .select('number', { count: 'exact', head: true });
+  if (error || count == null) return;
+  $('chip-count').textContent = `📝 ${count} câu`;
+}
+
 // Khi load trang: nếu có phiên đang dở thì khôi phục.
 async function init() {
+  // Chạy trước nhánh khôi phục: cần durationSec đúng cho phiên mới.
+  settingsReady = loadSettings().catch(() => {}); // lỗi cài đặt không được chặn làm bài
+  await Promise.all([settingsReady, loadQuestionCount().catch(() => {})]);
   const s = loadState();
   if (!s || !s.name || !s.deadline) return; // chưa có phiên -> ở màn nhập thông tin
   student = { name: s.name, cls: s.cls };

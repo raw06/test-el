@@ -39,6 +39,7 @@
     <nav class="tabs">
       <button class="tab active" data-tab="questions">📝 Câu hỏi</button>
       <button class="tab" data-tab="results">📊 Kết quả</button>
+      <button class="tab" data-tab="settings">⚙️ Cài đặt</button>
     </nav>
 
     <!-- Tab câu hỏi -->
@@ -74,6 +75,32 @@
           <tbody id="subs-body"></tbody>
         </table>
         <p id="subs-empty" class="muted center hidden">Chưa có học sinh nào nộp bài.</p>
+      </div>
+    </div>
+
+    <!-- Tab cài đặt -->
+    <div id="tab-settings" class="tab-panel hidden">
+      <div class="card toolbar">
+        <form id="settings-form">
+          <label class="field">
+            <span class="field-label">Tên bài kiểm tra <em>*</em></span>
+            <input id="set-title" required maxlength="120" placeholder="Thì động từ" />
+          </label>
+          <label class="field">
+            <span class="field-label">Phụ đề <span class="muted small">(tuỳ chọn)</span></span>
+            <input id="set-subtitle" maxlength="120" placeholder="Test 15–16" />
+          </label>
+          <label class="field">
+            <span class="field-label">Thời lượng làm bài (phút) <em>*</em></span>
+            <input id="set-duration" type="number" min="1" max="600" step="1" required placeholder="60" />
+          </label>
+          <p class="hint">Tên và phụ đề hiện ở đầu trang làm bài. Đổi thời lượng chỉ áp dụng cho học sinh <b>bắt đầu sau khi lưu</b> — em nào đang làm vẫn giữ đồng hồ cũ. Số câu hỏi trang làm bài tự đếm theo đề hiện tại.</p>
+          <p class="err" id="set-err"></p>
+          <div class="toolbar-row">
+            <button type="submit" id="set-save-btn" class="btn btn-primary">Lưu cài đặt</button>
+            <button type="button" id="set-reload-btn" class="btn btn-outline">↻ Tải lại</button>
+          </div>
+        </form>
       </div>
     </div>
   </section>

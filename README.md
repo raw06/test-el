@@ -7,6 +7,7 @@
 
 ## Setup
 1. Tạo project Supabase (free). Vào SQL Editor chạy `supabase/schema.sql` rồi `supabase/seed.sql`.
+   (`schema.sql` dùng `if not exists` / `create or replace` nên chạy lại trên DB đã có dữ liệu là an toàn — không mất câu hỏi hay kết quả.)
 2. Điền `SUPABASE_URL` + anon key vào `config.js`.
 3. Deploy Edge Functions + đặt secret:
    ```
@@ -21,6 +22,14 @@
 Mở `https://<user>.github.io/<repo>/admin.html` → nhập **ADMIN_TOKEN** để:
 - **Câu hỏi:** thêm / sửa / xoá từng câu, hoặc **upload CSV thay toàn bộ đề** (không cần chạy script).
 - **Kết quả:** xem bảng điểm tất cả học sinh, tải Excel, xoá kết quả.
+- **Cài đặt:** đổi tên bài kiểm tra, phụ đề và thời lượng làm bài (phút).
+
+### Cài đặt bài kiểm tra
+Tab **⚙️ Cài đặt** ghi vào bảng `settings` (1 dòng, `id = 1`); trang làm bài đọc qua view `settings_public`.
+- Tên + phụ đề hiện ở tiêu đề `index.html` và tên tab trình duyệt.
+- Thời lượng điều khiển luôn đồng hồ đếm ngược, chỉ áp dụng cho học sinh **bắt đầu sau khi lưu** — em nào đang làm vẫn giữ đồng hồ cũ (deadline đã chốt trong `localStorage`).
+- Số câu ở đầu trang tự đếm theo đề hiện có, không cần cấu hình.
+- Nếu chưa chạy phần `settings` trong `schema.sql`, trang làm bài vẫn chạy bình thường với giá trị mặc định ghi sẵn trong `index.html` (60 phút).
 
 Định dạng CSV (xem `mau-de.csv`): cột `number, content, option_a, option_b, option_c, option_d, correct` (correct = A/B/C/D).
 
