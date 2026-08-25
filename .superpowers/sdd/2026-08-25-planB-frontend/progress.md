@@ -290,3 +290,35 @@ Tự review:
     string. Đúng brief. Ruling: giữ nguyên — prefill là tính năng mới, ngoài phạm vi Plan B.
   - `.pill`, `.pill.ok/.draft/.bad`, `.exam-card` chưa có CSS. Ruling: đã nằm trong khối
     CSS Task 11 append (cùng nhóm 7 class thiếu đã ghi ở Task 10). Task 11 phải phủ hết.
+
+## Task 11: complete — `admin-results.js` + khối CSS `admin.css`
+- Commit: `6e46f02` "feat(admin): bảng kết quả theo đề và xem chi tiết bài làm"
+  (`admin-results.js` 169 dòng mới, `admin.css` +30 dòng)
+- Commit sửa: `dee7e60` "fix(admin): gỡ luật .det-opt.is-chosen-right bị luật sau phủ hoàn toàn"
+- Self-review:
+  - `diff` JS với brief: **IDENTICAL**. `diff` khối CSS 29 dòng cuối `admin.css` với brief:
+    **IDENTICAL**.
+  - Export `initResults`, `loadExamOptions` — khớp `admin.js:3`.
+  - 4/4 action (`list_exams get_exam list_submissions clear_submissions`) có `case` trong
+    Edge Function; implementer đã tự đối chiếu payload, không thiếu tham số.
+  - 13/13 id DOM tồn tại trong `admin.html` (controller pre-flight trước khi dispatch).
+  - **8/8 class thiếu từ Task 9 + Task 10 nay đã có style**: `.sec-card .q-table
+    .q-table-wrap .q-table .w-num .mono .pill(+ok/draft/bad) .blank-hint .exam-card`.
+    Gap CSS của Plan B đóng lại hoàn toàn.
+  - Escape: dữ liệu DB (`code`, `title`, `full_name`, `class_name`, options a–d, `stem`,
+    `explanation`, `accepted_answers`) đều qua `esc()`. Các `${}` trần còn lại: `e.id` (số),
+    tên class literal, và dòng 78 dùng `textContent` — an toàn.
+  - Cột Excel: 8 cột (`ID, Mã đề, Tên đề, Họ và tên, Lớp, Điểm, Tổng, Thời gian nộp`) khớp
+    100% tên + thứ tự + `!cols` với `supabase/functions/export/index.ts:30-43`. Hai đường
+    tải Excel không lệch nhau.
+  - Hàm `isRight` (trim + lower + loại chuỗi rỗng) khớp chính xác SQL `is_correct`
+    (`schema.sql:103-108`) → số câu sai hiện trong modal không lệch với `score` của DB.
+- **Bug đã sửa:** implementer báo `.det-opt.is-chosen-right` bị định nghĩa hai lần
+  (dòng 114 cũ `{font-weight:600}` và dòng 165 mới `{background:#dcfce7; font-weight:600}`).
+  Luật cũ bị luật sau phủ HOÀN TOÀN — cùng selector, cùng specificity, cùng thuộc tính,
+  luật sau thắng → dòng 114 là CSS chết. Đã xoá dòng 114 (`dee7e60`).
+  Ruling: xoá luật cũ chứ không sửa luật mới, vì luật mới là bản đầy đủ hơn và là bản
+  brief chỉ định. Chi phí nếu sai: chỉ là màu nền ô "học sinh chọn đúng" trong modal.
+- Regression: `node --test` 33/33 pass; `bash tests/sql/run.sh` TẤT CẢ PASS
+  (gồm assert bảo mật: anon không select được `questions`/`exams`, không gọi được
+  `exam_by_code`, chỉ gọi được `exam_info`).
