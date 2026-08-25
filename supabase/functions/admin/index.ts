@@ -296,15 +296,19 @@ Deno.serve(async (req) => {
       }
 
       case "list_submissions": {
+        const examId = parseInt(payload.exam_id, 10);
+        if (!Number.isInteger(examId)) throw new Error("'exam_id' không hợp lệ.");
         const { data, error } = await sb.from("submissions")
           .select("id, full_name, class_name, score, total, answers, created_at")
-          .order("id", { ascending: false });
+          .eq("exam_id", examId).order("id", { ascending: false });
         if (error) throw error;
         return json({ submissions: data });
       }
 
       case "clear_submissions": {
-        const { error } = await sb.from("submissions").delete().gte("id", 0);
+        const examId = parseInt(payload.exam_id, 10);
+        if (!Number.isInteger(examId)) throw new Error("'exam_id' không hợp lệ.");
+        const { error } = await sb.from("submissions").delete().eq("exam_id", examId);
         if (error) throw error;
         return json({ ok: true });
       }
