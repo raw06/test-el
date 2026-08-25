@@ -235,3 +235,15 @@ Tự review:
 **Màn kết quả (`app-result.js`) — 9/9 PASS:** đủ 5 câu, 3 badge Đúng / 2 badge Sai, `mcq` hiện lại đủ phương án còn `open_cloze` chỉ hiện từ đã gõ, câu 3 hiện cả hai đáp án chấp nhận `is / was`, đúng 3 khối giải thích (chỉ câu có `explanation`), điểm `3/5`.
 
 **Vòng lưu → khôi phục phiên:** `collectAnswers` → JSON → `applyAnswers` → `collectAnswers` trả lại **đúng nguyên vẹn** đáp án trên cả hai dạng nhập (radio và text), trên cả hai đề thật. Reload trang giữa chừng không mất bài.
+
+## Task 8: complete — `b280d38` — admin.html + admin-api.js + khung admin.js
+Tự review:
+- `diff` cả ba file với brief → **khớp 100%** (`admin.html`, `admin.js`, `admin-api.js` không lệch dòng nào).
+- 48 id khai báo; đối chiếu với 38 id mà T9/T10/T11 sẽ dùng → `comm -13` **rỗng**, không thiếu id nào.
+- Export `admin-api.js` (`api, esc, toast, getToken, setToken, clearToken`) phủ đủ những gì T9/T10/T11 import. Bốn hàm `admin.js` gọi (`initExams, loadExams, initResults, loadExamOptions`) đều được T9/T11 export đúng tên.
+- **Bảo mật:** `grep` `service_role|SERVICE_ROLE` trên `admin-api.js`, `admin.js`, `admin.html`, `config.js` → **không có kết quả**. Client chỉ gửi anon key qua gateway; quyền admin do `x-admin-token` quyết định. Ràng buộc CLAUDE.md còn nguyên.
+
+**Xử lý ba lo ngại của implementer:**
+1. *Import tĩnh `admin-exams.js`/`admin-results.js` chưa tồn tại* → đúng, là trạng thái trung gian có chủ đích của việc chia Task 8→11. Không chặn.
+2. *`.select-sm`, `.field-inline` chưa có style* → tôi quét toàn bộ class `admin.html` dùng: 14 class không có trong `admin.css`, nhưng **11 trong số đó đã có sẵn ở `styles.css`** (admin.html nạp cả hai file). Ba class còn lại — `.card-title`, `.field-inline`, `.select-sm` — nằm đúng trong khối CSS mà **Task 11** sẽ thêm vào cuối `admin.css`. Ruling: không phải thiếu sót, để Task 11 xử lý.
+3. *`deploy.yml`* → đã có chủ, Task 12.
