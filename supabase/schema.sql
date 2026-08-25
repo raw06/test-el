@@ -61,6 +61,9 @@ create table public.questions (
 
   foreign key (section_id, exam_id) references public.sections(id, exam_id) on delete cascade,
   foreign key (section_id, kind)    references public.sections(id, kind)    on delete cascade,
+  -- PostgREST cần FK TRỰC TIẾP mới nhúng được `questions(count)` từ `exams`.
+  -- Toàn vẹn tham chiếu vốn đã có bắc cầu qua sections, dòng này thêm đường trực tiếp.
+  foreign key (exam_id) references public.exams(id) on delete cascade,
 
   -- coalesce ở mọi vế: check constraint trả NULL là PASS, thiếu coalesce thì '{}' lọt hết.
   constraint content_shape check (

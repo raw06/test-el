@@ -35,74 +35,117 @@ Deno.serve(async (req) => {
       case "login":
         return json({ ok: true });
 
-      case "list_questions": {
-        const { data, error } = await sb.from("questions")
-          .select("id, number, content, option_a, option_b, option_c, option_d, correct_answer")
-          .order("number");
+      case "list_exams": {
+        const { data, error } = await sb.from("exams")
+          .select("id, code, title, subtitle, duration_min, opens_at, expires_at, " +
+                  "is_published, show_explanations, created_at, " +
+                  "sections(count), questions(count), submissions(count)")
+          .order("created_at", { ascending: false });
         if (error) throw error;
-        return json({ questions: data });
+        return json({ exams: data });
       }
 
-      case "save_question": {
-        const q = payload.question ?? {};
-        const num = parseInt(q.number, 10);
-        const correct = String(q.correct_answer || "").toUpperCase();
-        if (!Number.isInteger(num)) throw new Error("'number' không hợp lệ.");
-        if (!["A", "B", "C", "D"].includes(correct)) throw new Error("Đáp án đúng phải là A/B/C/D.");
-        for (const k of ["content", "option_a", "option_b", "option_c", "option_d"]) {
-          if (!String(q[k] || "").trim()) throw new Error(`Thiếu trường '${k}'.`);
+      case "get_exam": {
+        const id = parseInt(payload.exam_id, 10);
+        if (!Number.isInteger(id)) throw new Error("'exam_id' không hợp lệ.");
+        // Giữa sections và questions có HAI khoá ngoại ghép, phải chỉ đích danh
+        // dùng cái nào, không thì PostgREST trả PGRST201 "ambiguous embedding".
+        const { data, error } = await sb.from("exams")
+          .select("*, sections(*, questions!questions_section_id_exam_id_fkey(*))")
+          .eq("id", id).maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("Không tìm thấy đề.");
+        return json({ exam: data });
+      }
+
+      case "save_exam": {
+        const e = payload.exam ?? {};
+        const code = String(e.code ?? "").trim().toUpperCase();
+        const title = String(e.title ?? "").trim();
+        const duration = parseInt(e.duration_min, 10);
+        if (!/^[A-Z0-9]{3,12}$/.test(code)) {
+          throw new Error("Mã đề phải gồm 3–12 ký tự chữ HOA hoặc số.");
         }
-        const row = {
-          number: num, content: q.content.trim(),
-          option_a: q.option_a.trim(), option_b: q.option_b.trim(),
-          option_c: q.option_c.trim(), option_d: q.option_d.trim(),
-          correct_answer: correct,
-        };
-        // Upsert theo cột 'number' (unique) — sửa nếu đã có, thêm nếu chưa.
-        const { error } = await sb.from("questions").upsert(row, { onConflict: "number" });
-        if (error) throw error;
-        return json({ ok: true });
-      }
-
-      case "delete_question": {
-        const num = parseInt(payload.number, 10);
-        if (!Number.isInteger(num)) throw new Error("'number' không hợp lệ.");
-        const { error } = await sb.from("questions").delete().eq("number", num);
-        if (error) throw error;
-        return json({ ok: true });
-      }
-
-      case "replace_csv": {
-        const questions = csvToQuestions(String(payload.csv || ""));
-        // Thay toàn bộ đề: xoá hết rồi chèn mới.
-        const del = await sb.from("questions").delete().gte("number", 0);
-        if (del.error) throw del.error;
-        const ins = await sb.from("questions").insert(questions);
-        if (ins.error) throw ins.error;
-        return json({ ok: true, count: questions.length });
-      }
-
-      case "get_settings": {
-        const { data, error } = await sb.from("settings")
-          .select("title, subtitle, duration_min").eq("id", 1).maybeSingle();
-        if (error) throw error;
-        // Dòng id=1 do schema.sql tạo; nếu thiếu thì trả mặc định để form vẫn dùng được.
-        return json({ settings: data ?? { title: "Bài kiểm tra", subtitle: "", duration_min: 60 } });
-      }
-
-      case "save_settings": {
-        const s = payload.settings ?? {};
-        const title = String(s.title ?? "").trim();
-        const subtitle = String(s.subtitle ?? "").trim();
-        const duration = parseInt(s.duration_min, 10);
-        if (!title) throw new Error("Tên bài kiểm tra không được để trống.");
+        if (!title) throw new Error("Tên đề không được để trống.");
         if (!Number.isInteger(duration) || duration < 1 || duration > 600) {
           throw new Error("Thời lượng phải là số nguyên từ 1 đến 600 phút.");
         }
-        const { error } = await sb.from("settings")
-          .upsert({ id: 1, title, subtitle, duration_min: duration }, { onConflict: "id" });
+        const opens = e.opens_at ? new Date(e.opens_at) : null;
+        const expires = e.expires_at ? new Date(e.expires_at) : null;
+        if (opens && expires && opens >= expires) {
+          throw new Error("Thời điểm mở phải trước thời điểm hết hạn.");
+        }
+        const row = {
+          code, title,
+          subtitle: String(e.subtitle ?? "").trim(),
+          duration_min: duration,
+          opens_at: opens ? opens.toISOString() : null,
+          expires_at: expires ? expires.toISOString() : null,
+          is_published: !!e.is_published,
+          show_explanations: e.show_explanations !== false,
+        };
+        if (e.id) {
+          const { error } = await sb.from("exams").update(row).eq("id", parseInt(e.id, 10));
+          if (error) throw error;
+          return json({ ok: true, id: parseInt(e.id, 10) });
+        }
+        const { data, error } = await sb.from("exams").insert(row).select("id").single();
+        if (error) throw error;
+        return json({ ok: true, id: data.id });
+      }
+
+      case "delete_exam": {
+        const id = parseInt(payload.exam_id, 10);
+        const confirmCode = String(payload.confirm_code ?? "").trim().toUpperCase();
+        if (!Number.isInteger(id)) throw new Error("'exam_id' không hợp lệ.");
+        const { data: ex, error: exErr } = await sb.from("exams")
+          .select("code").eq("id", id).maybeSingle();
+        if (exErr) throw exErr;
+        if (!ex) throw new Error("Không tìm thấy đề.");
+        // Xoá cascade cả bài làm của học sinh -> bắt gõ lại mã để xác nhận.
+        if (confirmCode !== ex.code) throw new Error("Mã xác nhận không khớp. Chưa xoá gì cả.");
+        const { error } = await sb.from("exams").delete().eq("id", id);
         if (error) throw error;
         return json({ ok: true });
+      }
+
+      case "duplicate_exam": {
+        const id = parseInt(payload.exam_id, 10);
+        const newCode = String(payload.new_code ?? "").trim().toUpperCase();
+        if (!Number.isInteger(id)) throw new Error("'exam_id' không hợp lệ.");
+        if (!/^[A-Z0-9]{3,12}$/.test(newCode)) {
+          throw new Error("Mã đề mới phải gồm 3–12 ký tự chữ HOA hoặc số.");
+        }
+        const { data: src, error: srcErr } = await sb.from("exams")
+          .select("*, sections(*, questions!questions_section_id_exam_id_fkey(*))")
+          .eq("id", id).maybeSingle();
+        if (srcErr) throw srcErr;
+        if (!src) throw new Error("Không tìm thấy đề nguồn.");
+
+        // Bản sao luôn ở trạng thái nháp: tránh vô tình mở đề chưa soát.
+        const { data: ne, error: neErr } = await sb.from("exams").insert({
+          code: newCode, title: src.title + " (bản sao)", subtitle: src.subtitle,
+          duration_min: src.duration_min, opens_at: null, expires_at: null,
+          is_published: false, show_explanations: src.show_explanations,
+        }).select("id").single();
+        if (neErr) throw neErr;
+
+        for (const sec of (src.sections ?? [])) {
+          const { data: ns, error: nsErr } = await sb.from("sections").insert({
+            exam_id: ne.id, position: sec.position, kind: sec.kind, title: sec.title,
+            instructions: sec.instructions, passage: sec.passage, example: sec.example,
+          }).select("id").single();
+          if (nsErr) throw nsErr;
+          const qs = (sec.questions ?? []).map((q: any) => ({
+            section_id: ns.id, exam_id: ne.id, kind: sec.kind, number: q.number,
+            content: q.content, accepted_answers: q.accepted_answers, explanation: q.explanation,
+          }));
+          if (qs.length) {
+            const { error } = await sb.from("questions").insert(qs);
+            if (error) throw error;
+          }
+        }
+        return json({ ok: true, id: ne.id, code: newCode });
       }
 
       case "list_submissions": {
