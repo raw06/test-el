@@ -283,3 +283,97 @@ input:focus {
   .progress-wrap { max-width: none; }
   .progress-text { text-align: left; }
 }
+
+/* ---------- Màn nhập mã đề ---------- */
+.code-input {
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-weight: 700;
+  font-size: 20px;
+  text-align: center;
+}
+
+/* ---------- Phần thi ---------- */
+.sec { margin-bottom: 28px; animation: fadeUp .4s both; animation-delay: calc(var(--i) * 60ms); }
+.sec-title { font-size: 20px; margin: 0 0 4px; }
+.sec-instr { color: var(--muted); margin: 0 0 10px; }
+.sec-example {
+  background: var(--brand-soft); border-radius: 10px;
+  padding: 8px 12px; margin: 0 0 14px; font-size: 14px; font-weight: 600;
+}
+
+/* ---------- Đoạn văn có chỗ trống ---------- */
+.passage {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px 22px; box-shadow: var(--shadow);
+  /* Đoạn văn giữ nguyên xuống dòng của đề gốc, nên phải pre-wrap. */
+  white-space: pre-wrap;
+  line-height: 2.1;
+  margin-bottom: 16px;
+}
+.gap { display: inline-flex; align-items: center; gap: 4px; vertical-align: baseline; }
+.gap-num {
+  font-size: 11px; font-weight: 800; color: var(--brand);
+  background: var(--brand-soft); border-radius: 6px; padding: 1px 5px;
+}
+.gap-input {
+  font: inherit; font-size: 15px; font-weight: 600;
+  width: 8.5em; padding: 2px 8px;
+  border: 0; border-bottom: 2px solid var(--brand); border-radius: 4px 4px 0 0;
+  background: var(--brand-soft); color: var(--ink);
+}
+.gap-input:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+.gap-input.filled { background: #ecfdf5; border-bottom-color: var(--ok); }
+.gap-input.missing { background: var(--warn-bg); border-bottom-color: var(--warn-ink); }
+.gap-example { color: var(--muted); font-weight: 700; }
+.gap-ref {
+  font: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+  color: var(--brand); background: var(--brand-soft);
+  border: 1px solid transparent; border-radius: 8px; padding: 1px 9px;
+}
+.gap-ref:hover { border-color: var(--brand); }
+
+/* ---------- Bảng chọn A/B/C/D của mcq_cloze ---------- */
+.cloze-opts { display: grid; gap: 10px; }
+.q-inline { display: flex; gap: 12px; align-items: flex-start; }
+.q-inline-num {
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 800; font-size: 13px;
+  background: var(--brand-soft); color: var(--brand);
+}
+.q-inline-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; flex: 1; }
+.q-inline.answered .q-inline-num { background: var(--ok); color: #fff; }
+.q-inline.missing  .q-inline-num { background: var(--warn-ink); color: #fff; }
+
+/* ---------- Lời giải sau khi nộp ---------- */
+.review-wrap { max-width: 720px; margin: 24px auto 0; }
+.review-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.review-head h3 { margin: 0; }
+.review-list { display: grid; gap: 12px; margin-top: 12px; }
+.rv-q { padding: 16px 18px; border-left: 4px solid var(--ok); }
+.rv-q.is-wrong { border-left-color: var(--warn-ink); }
+.rv-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.rv-num { font-weight: 800; }
+.rv-meta { color: var(--muted); font-size: 14px; margin-left: auto; }
+.rv-badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; }
+.rv-badge.ok    { background: #dcfce7; color: #15803d; }
+.rv-badge.bad   { background: var(--warn-bg); color: var(--warn-ink); }
+.rv-badge.blank { background: #f3f4f6; color: var(--muted); }
+.rv-stem { font-weight: 600; margin-bottom: 8px; }
+.rv-opts { display: grid; gap: 4px; }
+.rv-opt { display: flex; gap: 8px; padding: 5px 10px; border-radius: 8px; font-size: 14px; }
+.rv-opt.is-correct { background: #dcfce7; }
+.rv-opt.is-chosen-wrong { background: var(--warn-bg); text-decoration: line-through; }
+.rv-key { font-weight: 800; width: 1.2em; }
+.rv-line { font-size: 15px; }
+.rv-exp {
+  margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+  background: var(--brand-soft); font-size: 14px; line-height: 1.6;
+}
+.chk { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+
+@media (max-width: 640px) {
+  .passage { padding: 16px; line-height: 2.3; }
+  .gap-input { width: 7em; }
+  .review-head { flex-direction: column; align-items: flex-start; }
+}
