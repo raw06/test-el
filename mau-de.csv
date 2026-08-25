@@ -1,4 +1,4 @@
-number,content,option_a,option_b,option_c,option_d,correct
-1,"She _____ to school every day.",go,goes,going,gone,B
-2,"They _____ football last Sunday.",play,plays,played,playing,C
-3,"I _____ my homework right now.",do,does,am doing,did,C
+number,content,option_a,option_b,option_c,option_d,correct,explanation
+1,She ___ to school every day.,go,goes,going,gone,B,"Chủ ngữ số ít ở thì hiện tại đơn nên động từ thêm -s."
+2,They ___ football when it started to rain.,play,played,were playing,have played,C,"Hành động đang diễn ra thì bị cắt ngang -> quá khứ tiếp diễn."
+3,I ___ here since 2019.,live,lived,have lived,am living,C,"'since + mốc thời gian' đi với hiện tại hoàn thành."
