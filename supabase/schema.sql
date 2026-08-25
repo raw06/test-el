@@ -110,6 +110,44 @@ returns boolean language sql immutable as $$
       and lower(btrim(a)) = lower(btrim(p_given)));
 $$;
 
+-- Đổi thứ tự các phần trong MỘT transaction: ràng buộc sections_position_uniq là
+-- deferrable, nhưng chỉ được hoãn tới lúc commit — mà PostgREST commit từng update
+-- một, nên hoán vị hai phần qua REST luôn đụng khoá. Gói vào hàm thì hết.
+create or replace function public.reorder_sections(p_exam_id bigint, p_order jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update public.sections s
+     set position = (v.value ->> 'position')::int
+    from jsonb_array_elements(p_order) v
+   where s.id = (v.value ->> 'id')::bigint
+     and s.exam_id = p_exam_id;
+end $$;
+
+-- Ghi cả bảng câu của MỘT phần trong MỘT transaction. Tách thành hai lệnh REST
+-- (delete rồi insert) thì insert hỏng sẽ để lại phần thi RỖNG — mất dữ liệu thật.
+create or replace function public.save_questions(p_section_id bigint, p_rows jsonb)
+returns int language plpgsql security definer set search_path = public as $$
+declare v_exam bigint; v_kind text; v_n int;
+begin
+  select exam_id, kind into v_exam, v_kind from public.sections where id = p_section_id;
+  if not found then raise exception 'Không tìm thấy phần thi.'; end if;
+
+  delete from public.questions where section_id = p_section_id;
+
+  insert into public.questions(section_id, exam_id, kind, number, content, accepted_answers, explanation)
+  select p_section_id, v_exam, v_kind,
+         (r ->> 'number')::int,
+         coalesce(r -> 'content', '{}'::jsonb),
+         array(select jsonb_array_elements_text(r -> 'accepted_answers')),
+         nullif(btrim(coalesce(r ->> 'explanation', '')), '')
+    from jsonb_array_elements(coalesce(p_rows, '[]'::jsonb)) r;
+  get diagnostics v_n = row_count;
+  return v_n;
+end $$;
+
+revoke all on function public.reorder_sections(bigint, jsonb) from public;
+revoke all on function public.save_questions(bigint, jsonb)   from public;
+
 -- ===== Tra đề theo mã + kiểm cửa sổ thời gian. Hàm NỘI BỘ, không cấp cho anon. =====
 create or replace function public.exam_by_code(p_code text)
 returns public.exams
