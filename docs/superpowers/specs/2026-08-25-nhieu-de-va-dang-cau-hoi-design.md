@@ -510,7 +510,10 @@ theo tên, quên là deploy thiếu file và trang trắng.
   và `drop function …` cho schema cũ.
 - Xoá `data/questions.json`, `scripts/gen-seed.mjs`, `supabase/seed.sql` — không nguồn
   nào còn khớp. Bỏ lệnh `node scripts/gen-seed.mjs` khỏi CLAUDE.md; sau thay đổi này
-  repo **không còn file nào cần Node**.
+  **không còn file nào chạy được deploy cần Node** (deploy vẫn thuần copy tĩnh).
+- Thêm `tests/` chạy bằng `node --test` (Node ≥ 18, không `package.json`, không cài gói)
+  và `tests/sql/` chạy trên Docker Postgres — xem §11. Đây là công cụ **chỉ dùng lúc dev**,
+  không tham gia build hay deploy.
 - Thêm `supabase/seed-demo.sql` dựng lại đúng hai đề mẫu CAE "Tap water" và FCE "Gold"
   để test ngay sau khi chạy schema.
 - Cập nhật CLAUDE.md: kiến trúc mới, bảng mới, RPC mới, danh sách file mới.
@@ -578,3 +581,39 @@ như trong §3.2 và §3.3.
 Mọi biểu thức trong `content_shape` bọc `coalesce` vì check constraint **trả NULL là
 PASS** — thiếu `coalesce` thì `content = '{}'` lọt qua mọi nhánh. Đây là ca đã test
 (ca số 2 trong bảng trên).
+
+## 11. Chiến lược kiểm thử
+
+Repo hiện **không có test suite**. Lần làm lại này thêm hai lớp test, cả hai
+**zero dependency** — không `package.json`, không `npm install`, không tham gia deploy.
+
+### 11.1 Test SQL — `tests/sql/`
+
+Chạy schema thật trên Docker Postgres 16, khẳng định constraint và hàm chấm điểm.
+Đây là lớp quan trọng nhất: DB là nơi giữ đúng đắn của cả hệ thống (§3.3, §4).
+
+```bash
+tests/sql/run.sh          # dựng container, chạy schema, chạy assertion, dọn
+```
+
+Bao gồm các ca đã kiểm chứng ở §10, cộng test cho ba RPC ở §4.3:
+`exam_info` / `start_exam` không rò `accepted_answers`; `submit_quiz` chặn đề hết hạn;
+`review` chỉ trả khi `show_explanations = true`.
+
+### 11.2 Test JS — `tests/*.test.mjs`
+
+Chạy bằng `node --test tests/` (Node ≥ 18 có sẵn runner, không cài gì).
+Chỉ test **logic thuần, không DOM, không mạng** — tách thành module nhập được:
+
+| Module | Hàm được test |
+|---|---|
+| `lib-passage.js` | `splitPassage(text)` → tách `{{n}}`, giữ thứ tự, bỏ qua `{{0}}` |
+| `lib-passage.js` | `scanBlanks(text)` → danh sách số câu, phát hiện trùng |
+| `lib-time.js` | `toUtcIso(local)` / `toLocalInput(iso)` → quy đổi `Asia/Ho_Chi_Minh` |
+| `lib-csv.js` | `parseCsv` / `csvToQuestions` → gói 4 cột option thành `content.options` |
+
+`lib-csv.js` dùng chung giữa Edge Function `admin` (Deno) và test (Node) — cả hai đều
+nhập ES module, không phải viết hai bản.
+
+**Không test bằng công cụ tự động:** render DOM, gọi Supabase thật, giao diện. Những
+phần này verify thủ công theo kịch bản ghi trong plan.
