@@ -192,3 +192,24 @@ Dựng DB sạch rồi chạy đúng ba RPC mà anon được phép gọi, đổ
 - **Chuỗi `accepted_answers` và `explanation` KHÔNG xuất hiện trong output `start_exam`** (kiểm bằng `includes` trên toàn JSON) → đáp án vẫn không ra client trước khi nộp. Ràng buộc thiết kế trung tâm còn nguyên.
 - `submit_quiz` trả `review` gồm `{chosen, number, accepted, is_correct, section_id, explanation}` — khớp đúng những khoá `app-result.js` đọc.
 - Chấm `open_cloze` **không phân biệt hoa thường và tự trim**: nộp `"AT"` và `"  Due "` cho câu đáp án `at`/`due` → score 2. Đúng thiết kế.
+
+## Task 6: complete — `ed075a1` + vá `9a3e840` — app.js
+Tự review:
+- `diff` code trong brief với file thực tế → **khớp 100%** (218/218 dòng).
+- 23/23 id `app.js` gọi đều có trong `index.html`; 10/10 export được import đều tồn tại đúng tên ở `app-render.js` / `app-result.js` / `lib-time.js`.
+- `STORAGE_KEY` đã bump lên `quiz_state_v3` — đúng quy ước khi đổi shape state (nay thêm `code` và đáp án dạng chữ).
+
+### 🐞 Lỗi thật tìm được và đã vá — `9a3e840`
+**Triệu chứng:** học sinh bấm Nộp khi còn thiếu câu → ô điền từ `open_cloze` bị tô đỏ (đúng). Nhưng khi em gõ đáp án vào, **ô vẫn đỏ nguyên** dù đã làm xong.
+
+**Nguyên nhân:** `markAnswered()` gỡ `.missing` trong vòng lặp `querySelectorAll('[data-num]')`. Ô `open_cloze` nằm trong `<span class="gap">` — thẻ này **không có** `data-num` (chỉ `input` bên trong có `data-qnum`), nên không bao giờ lọt vào vòng lặp đó. Task 6 lại gắn `.missing` thẳng lên `input[data-qnum]`. Gắn một đường, gỡ một đường khác → kẹt.
+
+Đây đúng là rủi ro tôi đã ghi ở phần bàn giao sau Task 4/7; Task 6 gắn dấu đúng chỗ nhưng chiều gỡ vẫn hở.
+
+**Cách vá:** sửa ở `app-render.js` (nơi sinh ra vấn đề, không phải nơi lộ ra), thêm `if (isDone) el.classList.remove('missing')` vào đúng vòng lặp đã duyệt `input[type="text"][data-qnum]`.
+
+**Kiểm chứng:** dựng `classList` giả, đặt ô ở trạng thái `['gap-input','missing']` rồi gõ đáp án → trước vá còn `missing`, sau vá chỉ còn `gap-input filled`. Chạy lại toàn bộ: 14/14 kiểm tra render PASS, 0 lệch trên hai đề thật, `node --test` 33/33 pass.
+
+**Ruling:** vá tại Task 4 thay vì Task 6 vì `markAnswered` là API chung — Task 6 dùng đúng hợp đồng đã công bố, lỗi nằm ở hợp đồng.
+
+**Lo ngại của implementer (chưa chạy được kiểm tra trên trình duyệt thật vì không có backend Supabase sống):** hợp lý. Đã bù bằng cách chạy module với output thật của `start_exam`/`submit_quiz` từ Postgres dựng trong Docker. Vẫn giữ khuyến nghị: **bấm thử trên trình duyệt trước khi merge.**
