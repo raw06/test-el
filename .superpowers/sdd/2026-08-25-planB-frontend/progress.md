@@ -157,3 +157,8 @@ Tự review:
 - Lo ngại của implementer (chưa kiểm bằng mắt vì Task 4/5 chạy song song): ghi nhận, sẽ kiểm ở bước cuối sau Task 6.
 
 **Ghi chú bàn giao cho Task 6:** `markAnswered()` chỉ toggle `.answered/.missing` trên phần tử có `data-num`. Ô `open_cloze` nằm trong `<span class="gap">` **không có** `data-num`, nên class `.gap-input.missing` (CSS Task 7 có định nghĩa) phải do Task 6 tự gắn khi đánh dấu câu chưa làm lúc nộp.
+
+### Quét trước Task 8–11 (làm trong lúc chờ Task 5)
+- **id `admin.html`(T8) ↔ id T9/T10/T11 dùng:** T8 khai báo 48 id, ba task sau tham chiếu 38 id. `comm -13` → **rỗng**. Không có id nào bị dùng mà chưa khai báo.
+- **action frontend gọi ↔ `case` trong `supabase/functions/admin/index.ts`:** frontend gọi 13 action, Edge Function có 14 `case` (thừa `delete_question`, dùng bởi nút xoá lẻ). `comm -13` → **rỗng**. Không có action nào gọi trượt.
+- Ruling: giữ nguyên thứ tự T8 → T10 → T9 → T11 theo Finding B3 (T10 sinh `admin-sections.js` mà T9 import).
