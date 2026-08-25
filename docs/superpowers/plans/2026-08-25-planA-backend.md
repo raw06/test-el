@@ -132,7 +132,7 @@ git commit -m "test: thêm runner test SQL trên Docker Postgres"
 
 ```sql
 -- Dữ liệu nền
-insert into exams(code,title,is_published) values ('T1','Đề test',true);
+insert into exams(code,title,is_published) values ('T01','Đề test',true);
 insert into sections(exam_id,position,kind,passage) values (1,1,'mcq_cloze','Gold is {{1}} metal');
 insert into sections(exam_id,position,kind) values (1,2,'mcq');
 insert into sections(exam_id,position,kind,passage) values (1,3,'open_cloze','factors {{9}} play');
@@ -169,7 +169,7 @@ select assert(blocked($$insert into questions(section_id,exam_id,kind,number,con
   values (1,1,'mcq',4,'{"stem":"x","options":{"a":"1","b":"2","c":"3","d":"4"}}','{A}')$$),
   'kind lệch section bị chặn');
 
-insert into exams(code,title,is_published) values ('T2','Đề hai',true);
+insert into exams(code,title,is_published) values ('T02','Đề hai',true);
 select assert(blocked($$insert into questions(section_id,exam_id,kind,number,content,accepted_answers)
   values (1,2,'mcq_cloze',5,'{"options":{"a":"1","b":"2","c":"3","d":"4"}}','{A}')$$),
   'exam_id lệch section bị chặn');
@@ -202,7 +202,7 @@ do $$ begin
 end $$;
 select assert(true, 'đảo thứ tự phần trong 1 transaction chạy được');
 
-delete from exams where code='T1';
+delete from exams where code='T01';
 select assert((select count(*) from questions) = 0, 'xoá đề cascade sạch questions');
 select assert((select count(*) from sections)  = 0, 'xoá đề cascade sạch sections');
 ```
