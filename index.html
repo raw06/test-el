@@ -3,22 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bài kiểm tra — Thì động từ (50 câu)</title>
+  <title>Bài kiểm tra tiếng Anh</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Màn 1: form thông tin -->
-  <section id="screen-info" class="screen">
+  <!-- Màn 1: nhập mã đề -->
+  <section id="screen-code" class="screen">
     <div class="card intro-card">
       <span class="badge">Bài kiểm tra</span>
-      <h1><span id="quiz-title">Thì động từ</span> <span id="quiz-subtitle" class="muted">(Test 15–16)</span></h1>
-      <div class="meta-row">
-        <span class="chip" id="chip-count">📝 50 câu</span>
-        <span class="chip" id="chip-duration">⏱️ 60 phút</span>
-        <span class="chip">✅ Trắc nghiệm A/B/C/D</span>
+      <h1>Nhập mã đề</h1>
+      <p class="lead">Nhập mã đề giáo viên đưa cho bạn để xem thông tin bài kiểm tra.</p>
+      <form id="code-form">
+        <label class="field">
+          <span class="field-label">Mã đề <em>*</em></span>
+          <input id="exam-code" required maxlength="12" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false"
+                 class="code-input" placeholder="GOLD8" />
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Tìm đề →</button>
+      </form>
+      <p class="err" id="code-err"></p>
+    </div>
+  </section>
+
+  <!-- Màn 2: xem thông tin đề + nhập họ tên -->
+  <section id="screen-info" class="screen hidden">
+    <div class="card intro-card">
+      <span class="badge">Bài kiểm tra</span>
+      <h1><span id="quiz-title">Bài kiểm tra</span> <span id="quiz-subtitle" class="muted"></span></h1>
+      <div class="meta-row" id="exam-preview">
+        <span class="chip" id="chip-count">📝 — câu</span>
+        <span class="chip" id="chip-duration">⏱️ — phút</span>
+        <span class="chip" id="chip-expires">⏳ Không giới hạn</span>
       </div>
       <p class="lead">Nhập thông tin của bạn để bắt đầu. Đồng hồ sẽ chạy ngay khi bạn nhấn <b>Bắt đầu</b>.</p>
       <form id="info-form">
@@ -32,10 +51,12 @@
         </label>
         <button type="submit" class="btn btn-primary btn-block">Bắt đầu làm bài →</button>
       </form>
+      <p class="err" id="info-err"></p>
+      <p class="muted small"><a href="#" id="change-code">← Đổi mã đề khác</a></p>
     </div>
   </section>
 
-  <!-- Màn 2: làm bài -->
+  <!-- Màn 3: làm bài -->
   <section id="screen-quiz" class="screen quiz-layout hidden">
     <aside class="quiz-sticky">
       <div id="timer-bar">
@@ -43,7 +64,7 @@
           <span class="timer-dot"></span>
           <div>
             <div class="timer-caption">Thời gian còn lại</div>
-            <span id="timer" class="timer-clock">60:00</span>
+            <span id="timer" class="timer-clock">--:--</span>
           </div>
         </div>
         <div class="progress-wrap">
@@ -64,14 +85,14 @@
       </div>
     </aside>
     <form id="quiz-form">
-      <div id="questions"></div>
+      <div id="sections"></div>
       <div class="submit-row">
         <button type="submit" id="submit-btn" class="btn btn-primary btn-lg">Nộp bài</button>
       </div>
     </form>
   </section>
 
-  <!-- Màn 3: kết quả -->
+  <!-- Màn 4: kết quả + lời giải -->
   <section id="screen-result" class="screen hidden">
     <div class="card result-card">
       <div id="result-emoji" class="result-check">✓</div>
@@ -79,10 +100,17 @@
       <p id="score-text" class="score-text"></p>
       <p id="result-note" class="muted">Bạn có thể đóng trang này.</p>
     </div>
+    <div id="review-wrap" class="review-wrap hidden">
+      <div class="card review-head">
+        <h3>Lời giải chi tiết</h3>
+        <label class="chk"><input type="checkbox" id="only-wrong-result" /> Chỉ hiện câu sai</label>
+      </div>
+      <div id="review-list" class="review-list"></div>
+    </div>
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

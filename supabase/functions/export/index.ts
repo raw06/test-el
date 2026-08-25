@@ -14,14 +14,23 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
-  const { data, error } = await sb
-    .from("submissions")
-    .select("id, full_name, class_name, score, total, created_at")
+  const examCode = url.searchParams.get("exam");   // tuỳ chọn: lọc theo mã đề
+  let q = sb.from("submissions")
+    .select("id, full_name, class_name, score, total, created_at, exams(code, title)")
     .order("id", { ascending: true });
+  if (examCode) {
+    const { data: ex } = await sb.from("exams")
+      .select("id").eq("code", examCode.toUpperCase()).maybeSingle();
+    if (!ex) return new Response("Không tìm thấy đề: " + examCode, { status: 404 });
+    q = q.eq("exam_id", ex.id);
+  }
+  const { data, error } = await q;
   if (error) return new Response("DB error: " + error.message, { status: 500 });
 
-  const rows = (data ?? []).map((r) => ({
+  const rows = (data ?? []).map((r: any) => ({
     "ID": r.id,
+    "Mã đề": r.exams?.code ?? "",
+    "Tên đề": r.exams?.title ?? "",
     "Họ và tên": r.full_name,
     "Lớp": r.class_name,
     "Điểm": r.score,
@@ -30,7 +39,8 @@ Deno.serve(async (req) => {
   }));
 
   const ws = utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 6 }, { wch: 24 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 20 }];
+  ws["!cols"] = [{ wch: 6 }, { wch: 10 }, { wch: 24 }, { wch: 24 },
+                 { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 20 }];
   const wb = utils.book_new();
   utils.book_append_sheet(wb, ws, "KetQua");
   const buf: Uint8Array = write(wb, { type: "array", bookType: "xlsx" });

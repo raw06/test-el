@@ -12,8 +12,18 @@ jobs:
       - name: Assemble public/
         run: |
           mkdir -p public
-          cp index.html styles.css app.js config.js public/
-          cp admin.html admin.css admin.js mau-de.csv public/
+          # Liệt kê từng file: thiếu tên nào là file đó không lên Pages, trang trắng ngay.
+          cp index.html styles.css config.js public/
+          cp app.js app-render.js app-result.js public/
+          cp lib-passage.js lib-time.js public/
+          cp admin.html admin.css mau-de.csv public/
+          cp admin.js admin-api.js admin-exams.js admin-sections.js admin-results.js public/
+          # Chốt chặn: thiếu file nào thì fail build thay vì deploy trang hỏng.
+          for f in index.html styles.css config.js app.js app-render.js app-result.js \
+                   lib-passage.js lib-time.js admin.html admin.css admin.js admin-api.js \
+                   admin-exams.js admin-sections.js admin-results.js mau-de.csv; do
+            test -f "public/$f" || { echo "THIẾU public/$f"; exit 1; }
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: public }

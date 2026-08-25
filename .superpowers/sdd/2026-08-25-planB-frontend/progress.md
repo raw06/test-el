@@ -1,0 +1,324 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-08-25-planB-frontend.md
+
+Plan A (backend) đã xong 9/9, HEAD `06a8764`. Plan B chạy tiếp trên cùng branch `feat/nhieu-de-va-dang-cau-hoi`.
+
+## Quét tiền kiểm (trước khi dispatch Task 1)
+
+### Cặp task dùng chung file / giao diện
+
+| Cặp | Bên sản xuất → bên tiêu thụ | Kết quả |
+|---|---|---|
+| T1 → T9, T11 | `toUtcIso`/`toLocalInput`/`formatVn` → form hạn nộp + bảng kết quả | khớp, cả ba đều được import đúng tên |
+| T2 → T4, T10 | `splitPassage` → `app-render.js`; `diffBlanks`/`scanBlanks` → `admin-sections.js` | khớp |
+| T3 → T4, T5, T6 | 34 id trong `index.html` → mọi `$('…')` của app | **khớp tuyệt đối**: 30 id được dùng, 0 id thiếu |
+| T8 → T9, T10, T11 | 48 id trong `admin.html` → 45 id được ba module admin dùng | **0 id thiếu** |
+| T8 → T9, T10, T11 | `api`/`esc`/`toast`/token → cả ba module | khớp |
+| T9 ↔ T10 | `openExam` ↔ `renderSectionsAdmin` — **phụ thuộc vòng tròn** | xem Finding B1 |
+| T4 → T5 | `escapeHtml`, `allQuestions` | khớp |
+| T1–T11 → T12 | 7 file mới → danh sách `cp` trong `deploy.yml` | khớp, T12 liệt kê đủ 7 file mới |
+
+### Đối chiếu ngược với Plan A (đã deploy)
+
+| Kiểm | Kết quả |
+|---|---|
+| 13 action Plan B gọi vs 14 action Edge Function có | **đủ cả 13**. `delete_question` backend có mà Plan B không dùng — xem Finding B2 |
+| 3 RPC app.js gọi (`exam_info`, `start_exam`, `submit_quiz`) vs `grant execute … to anon` | khớp đúng 3, không thừa không thiếu |
+| Field `exam_info` schema trả (`code,title,subtitle,duration_min,total,expires_at,show_explanations`) vs Task 6 đọc (`code,title,subtitle,duration_min,total,expires_at`) | khớp, T6 chỉ bỏ qua `show_explanations` (không cần, vì `review` tự là `null` khi tắt) |
+| Field `review[]` schema trả (`number,section_id,chosen,is_correct,accepted,explanation`) vs Task 5 đọc (`number,chosen,is_correct,accepted,explanation`) | khớp |
+| `submit_quiz` trả `{score,total,review}` vs Task 6 đọc `data.score/data.total/data.review` | khớp |
+
+### Từng task tự nhất quán?
+
+| Task | Kiểm | Kết quả |
+|---|---|---|
+| T1 | 10 test vs 3 hàm export | nhất quán |
+| T2 | test vs 3 hàm export, có ca `{{0}}` là ví dụ mẫu | nhất quán |
+| T3 | id khai báo vs id các task sau dùng | nhất quán (xem bảng trên) |
+| T4–T7 | export vs nơi import | nhất quán |
+| T8–T11 | export vs nơi import, id vs `admin.html` | nhất quán |
+| T12 | `deploy.yml` liệt kê file vs file thật tạo ra | nhất quán |
+
+**Finding B1 — phụ thuộc vòng tròn `admin-exams.js` ↔ `admin-sections.js`.**
+T9 import tĩnh `renderSectionsAdmin` từ T10; T10 cần `openExam` từ T9. Plan đã tự giải: T10 dùng `const { openExam } = await import('./admin-exams.js')` (import động, trong hàm) thay vì import tĩnh. ES modules xử lý được vòng này vì cạnh động chỉ chạy lúc gọi hàm, không phải lúc nạp module.
+Ruling: KHÔNG sửa plan. Giá nếu sai: `openExam is not a function` lúc bấm lưu ở màn soạn phần thi — lộ ngay lần thử đầu, sửa một dòng.
+
+**Finding B2 — `delete_question` không có nơi gọi.**
+Backend có action này (Task A8) nhưng Plan B xoá câu theo cách khác: `save_questions` ghi đè cả bảng câu của một phần, nên xoá một câu = gửi lại danh sách thiếu câu đó.
+Ruling: giữ nguyên, KHÔNG thêm task gọi `delete_question`. Đó là một action dự phòng không hại gì. Giá nếu sai: một `case` chết trong Edge Function — vô hại.
+
+**Finding B3 — thứ tự dispatch phải là T8 → T10 → T9.**
+T9 import tĩnh từ T10, nên nếu làm T9 trước thì file `admin-sections.js` chưa tồn tại và không test thử được gì. Plan đánh số T9 trước T10 nhưng nội dung không phụ thuộc thứ tự viết.
+Ruling: dispatch theo thứ tự **T10 trước T9**. Giá nếu sai: không có — chỉ là thứ tự thi công, kết quả cuối giống hệt.
+
+### Song song hoá
+
+- T1 ‖ T2 — hai file thuần, không đụng nhau, cùng thêm test riêng. Dispatch song song.
+- T3 phải xong trước T4/T5/T6 (chúng bám id của nó).
+- T4 → T5 → T6 nối tiếp (T5 import T4, T6 import cả hai).
+- T7 độc lập sau T3.
+- T8 trước T10/T9/T11.
+- T12 cuối cùng, và **không dispatch cho subagent** — nó deploy thật lên GitHub Pages + Supabase.
+
+---
+
+## Task 1: complete
+
+**Commit:** `dd7cf3d` — feat: lib-time đổi giờ giữa form và DB theo múi giờ Việt Nam (`lib-time.js` 34 dòng, `tests/lib-time.test.mjs` 52 dòng)
+
+**Tự review (chạy thật bằng node):**
+
+| Kiểm | Kết quả |
+|---|---|
+| `toUtcIso('2026-08-25T14:30')` | `2026-08-25T07:30:00.000Z` — đúng −7h |
+| Qua ngày: `03:00` VN | `2026-08-24T20:00:00.000Z` — lùi sang hôm trước, đúng |
+| Dạng có giây | `14:30:45` → `07:30:45.000Z` |
+| Rác/rỗng/`null`/`undefined`/`'2026-13-45T99:99'` | đều trả `null`, không ném |
+| Khứ hồi 3 mốc hiểm (`23:59` cuối năm, nửa đêm mùng 1, nửa đêm thường) | cả 3 **OK**, không lệch |
+| `formatVn` | `14:30:00 25/8/2026`, rỗng/rác → `—` |
+
+**Điểm tốt:** dùng `Intl.DateTimeFormat` với `timeZone: 'Asia/Ho_Chi_Minh'` + `hourCycle: 'h23'` thay vì cộng trừ tay — nửa đêm ra `00` chứ không phải `24`. Hằng số `VN_OFFSET = '+07:00'` cố định, không phụ thuộc múi giờ máy giáo viên (comment đã nói rõ lý do).
+
+**Regression:** `node --test` 33/33 pass (10 lib-time + 10 lib-passage + 13 cũ), 0 fail.
+
+Không có lo ngại nào từ implementer, tôi cũng không tìm thấy.
+
+---
+
+## Task 2: complete
+
+**Commit:** `7b8be5f` — feat: lib-passage tách đoạn văn theo dấu {{n}} (`lib-passage.js` 36 dòng, `tests/lib-passage.test.mjs` 68 dòng)
+
+**Tự review (chạy thật bằng node):**
+
+| Kiểm | Kết quả |
+|---|---|
+| Giữ nguyên xuống dòng + khoảng trắng kép | ghép lại các mảnh == chuỗi gốc, `true` |
+| Gọi `scanBlanks` 3 lần liên tiếp (bẫy `lastIndex` của regex `/g`) | `[9,10,11]` cả ba lần — implementer đã chủ động `GAP_RE.lastIndex = 0` |
+| `{{ 12 }}` có khoảng trắng trong ngoặc | nhận đúng `[12,13]` |
+| Rỗng / `null` | `[]`, không ném |
+| Không có chỗ trống nào | trả một mảnh `text` duy nhất |
+| `{{0}}` là ví dụ mẫu | `scanBlanks` vẫn liệt kê `0` (để render được), `diffBlanks` loại `0` ra — đúng ý đồ |
+| Lệch đủ 3 kiểu: `{{9}} {{9}} {{10}} {{12}}` vs `[9,10,11]` | `duplicates:[9]`, `missingQuestions:[12]`, `orphanQuestions:[11]` — chính xác |
+| `numbers` là chuỗi (`['9','10']`, dạng đến từ `dataset` HTML) | vẫn khớp nhờ `.map(Number)` |
+| `numbers` là `null` | không ném, báo `missingQuestions` |
+
+**Kiểm với dữ liệu THẬT** (dựng Postgres + nạp `schema.sql` + `seed-demo.sql`, đọc `passage` và số câu ra rồi chạy `diffBlanks`):
+
+```
+TAP8  | chỗ trống: 0,9,10,…,16 | câu: 9,…,16 | KHỚP ✓
+GOLD8 | chỗ trống: 0,1,2,…,8   | câu: 1,…,8  | KHỚP ✓
+```
+
+Cả hai đề mẫu không báo lệch nào — nghĩa là `admin-sections.js` (Task 10) sẽ không bắn cảnh báo giả trên đề thật.
+
+**Regression:** `node --test` 33/33 pass.
+
+Không có lo ngại nào từ implementer, tôi cũng không tìm thấy.
+
+---
+
+## Task 3: complete
+
+**Commit:** `14c225a` — feat(app): index.html thêm màn nhập mã đề và khối lời giải (+41 −13)
+
+**Tự review:**
+
+| Kiểm | Kết quả |
+|---|---|
+| 35 id khai báo vs brief yêu cầu | **khớp tuyệt đối** — 0 thiếu, 0 thừa |
+| 30 id mà Task 4/5/6 sẽ dùng | **0 id thiếu** |
+| Bốn màn `screen-code / screen-info / screen-quiz / screen-result` | đủ, ba màn sau có `hidden` sẵn |
+| Nạp script | `supabase-js` + `config.js` thẻ thường, `app.js` là `type="module"` — đúng thứ tự |
+| Cân thẻ đóng/mở | 64/64 ✓ |
+| Fallback text (ràng buộc CLAUDE.md) | giữ đúng tinh thần: `📝 — câu`, `⏱️ — phút`, `⏳ Không giới hạn`, `<h1>` mặc định "Bài kiểm tra" |
+| Khối lời giải | `review-wrap` có `hidden` sẵn + ô "Chỉ hiện câu sai" (`only-wrong-result`) |
+| Ô nhập mã đề | `maxlength="12"`, `autocapitalize="characters"`, `spellcheck="false"`, placeholder `GOLD8` — hợp với ràng buộc mã đề `^[A-Z0-9]{3,12}$` của Plan A |
+
+**Lo ngại của implementer — xác nhận đúng và KHÔNG chặn:** `app.js` hiện tại vẫn là bản cũ nên trang học sinh sẽ hỏng cho tới Task 6. Đây là trạng thái trung gian đã dự liệu khi tách task theo file. Ruling: tiếp tục. Giá nếu sai: không có — Task 6 viết lại toàn bộ `app.js`.
+
+**Regression:** `node --test` 33/33 pass.
+
+## Task 4: complete — `eb1c772` — app-render.js
+Tự review (bash + node, không dùng subagent vì reviewer sonnet đã chết 429 từ Task A4):
+- `diff` code trong brief với file thực tế → **khớp 100%**, không thêm bớt dòng nào.
+- Chạy `renderSections` với dữ liệu ba dạng (mcq + open_cloze + mcq_cloze, có cả gap `{{0}}` ví dụ): **14/14 PASS**.
+  - XSS: `<img src=x onerror=...>` trong `stem` và `<b>` trong `title` đều bị escape → không lọt thẻ thật nào.
+  - `{{0}}` ra `.gap-example` (không sinh input) — đúng ý "ví dụ mẫu không phải câu cần làm".
+  - Xuống dòng trong passage giữ nguyên (`quality.\nIn`) — ăn khớp `white-space: pre-wrap` của Task 7.
+  - `mcq_cloze` chỉ sinh `.gap-ref` trong đoạn văn, không sinh `.gap-input` → không có ô nhập lạc chỗ.
+  - `renderNav` sắp đúng 1,9,10,11 (liên tục toàn đề, không theo thứ tự phần).
+- `node --test 'tests/*.test.mjs'` → 33/33 pass.
+
+## Task 7: complete — `2fb37ed` — styles.css
+Tự review:
+- `diff` phần thêm với CSS trong brief → **khớp 100%**, chỉ append 94 dòng cuối file, không đụng CSS cũ.
+- Đối chiếu mọi biến CSS dùng (`--brand-soft --warn-bg --warn-ink --ok --card --line --radius --shadow --ink --muted`) và `@keyframes fadeUp`: **tất cả đã tồn tại** trong `:root` → không có màu nào ra `unset`.
+- Đối chiếu mọi class `app-render.js` sinh ra với selector trong `styles.css`: chỉ `.opt-text` không có rule riêng — **không phải lỗi mới**, `app.js` cũ cũng sinh class này và `styles.css` cũ cũng chưa bao giờ style nó (thừa hưởng font từ `.opt`). Ruling: bỏ qua, không phải regression.
+- Lo ngại của implementer (chưa kiểm bằng mắt vì Task 4/5 chạy song song): ghi nhận, sẽ kiểm ở bước cuối sau Task 6.
+
+**Ghi chú bàn giao cho Task 6:** `markAnswered()` chỉ toggle `.answered/.missing` trên phần tử có `data-num`. Ô `open_cloze` nằm trong `<span class="gap">` **không có** `data-num`, nên class `.gap-input.missing` (CSS Task 7 có định nghĩa) phải do Task 6 tự gắn khi đánh dấu câu chưa làm lúc nộp.
+
+### Quét trước Task 8–11 (làm trong lúc chờ Task 5)
+- **id `admin.html`(T8) ↔ id T9/T10/T11 dùng:** T8 khai báo 48 id, ba task sau tham chiếu 38 id. `comm -13` → **rỗng**. Không có id nào bị dùng mà chưa khai báo.
+- **action frontend gọi ↔ `case` trong `supabase/functions/admin/index.ts`:** frontend gọi 13 action, Edge Function có 14 `case` (thừa `delete_question`, dùng bởi nút xoá lẻ). `comm -13` → **rỗng**. Không có action nào gọi trượt.
+- Ruling: giữ nguyên thứ tự T8 → T10 → T9 → T11 theo Finding B3 (T10 sinh `admin-sections.js` mà T9 import).
+
+## Task 5: complete — `27bd82e` — app-result.js
+Tự review (bash + node, dựng DOM giả để chạy thật):
+- `diff` code trong brief với file thực tế → **khớp 100%**.
+- Đối chiếu hình dạng `review` với `submit_quiz` trong `supabase/schema.sql`: RPC trả `{number, section_id, chosen, is_correct, accepted, explanation}` — **đúng từng khoá** module đọc. `review` là `null` khi `show_explanations = false`, module xử lý đúng nhánh đó.
+- Chạy `renderResult` với đủ ba dạng câu: **16/16 PASS**.
+  - XSS: `<script>alert(1)</script>` trong `explanation`, `<b>` trong `stem` và trong tên học sinh đều bị escape — không lọt thẻ thật nào.
+  - `mcq`/`mcq_cloze` hiện lại đủ A/B/C/D, tô xanh đáp án đúng, gạch ngang đáp án học sinh chọn sai.
+  - `open_cloze` chỉ hiện từ đã gõ + danh sách đáp án chấp nhận (`during / in`), **không** vẽ nhầm bốn phương án — đúng vì `content` dạng này rỗng.
+  - `review: null` → ẩn `#review-wrap`; nộp tự động → ghi chú "hết giờ".
+  - Lọc "Chỉ hiện câu sai" → còn đúng 2/3 câu.
+- `node --test 'tests/*.test.mjs'` → 33/33 pass.
+
+**Lo ngại của implementer (`deploy.yml` chưa copy `app-result.js`):** đã có chủ. Ruling — đây là **Task 12**, task cuối Plan B, gom một lần cho cả 8 file mới. Không phải việc của Task 5, không chặn. Nhưng là lỗi chết trang nếu quên, nên đánh dấu: **Task 12 bắt buộc chạy trước khi merge vào `main`.**
+
+### Kiểm chứng bằng DB thật (Postgres 16 trong Docker, `schema.sql` + `seed-demo.sql`)
+Dựng DB sạch rồi chạy đúng ba RPC mà anon được phép gọi, đổ output thật vào `app-render.js`:
+
+| Kiểm | TAP8 (open_cloze) | GOLD8 (mcq_cloze) |
+|---|---|---|
+| Số câu trong nav | 8 | 8 |
+| Câu có ô nhập đáp án | 8 ✓ khớp | 8 ✓ khớp |
+| Gap ví dụ `{{0}}` tách riêng | 1 | 1 |
+| Còn sót cú pháp `{{ }}` | ✓ hết | ✓ hết |
+| Thẻ HTML thô lọt qua escape | ✓ sạch | ✓ sạch |
+
+- `start_exam` trả khoá cấp 1: `code, title, subtitle, duration_min, expires_at, sections`; mỗi section có `id, position, kind, title, instructions, passage, example, questions`; mỗi câu chỉ có `number, content`.
+- **Chuỗi `accepted_answers` và `explanation` KHÔNG xuất hiện trong output `start_exam`** (kiểm bằng `includes` trên toàn JSON) → đáp án vẫn không ra client trước khi nộp. Ràng buộc thiết kế trung tâm còn nguyên.
+- `submit_quiz` trả `review` gồm `{chosen, number, accepted, is_correct, section_id, explanation}` — khớp đúng những khoá `app-result.js` đọc.
+- Chấm `open_cloze` **không phân biệt hoa thường và tự trim**: nộp `"AT"` và `"  Due "` cho câu đáp án `at`/`due` → score 2. Đúng thiết kế.
+
+## Task 6: complete — `ed075a1` + vá `9a3e840` — app.js
+Tự review:
+- `diff` code trong brief với file thực tế → **khớp 100%** (218/218 dòng).
+- 23/23 id `app.js` gọi đều có trong `index.html`; 10/10 export được import đều tồn tại đúng tên ở `app-render.js` / `app-result.js` / `lib-time.js`.
+- `STORAGE_KEY` đã bump lên `quiz_state_v3` — đúng quy ước khi đổi shape state (nay thêm `code` và đáp án dạng chữ).
+
+### 🐞 Lỗi thật tìm được và đã vá — `9a3e840`
+**Triệu chứng:** học sinh bấm Nộp khi còn thiếu câu → ô điền từ `open_cloze` bị tô đỏ (đúng). Nhưng khi em gõ đáp án vào, **ô vẫn đỏ nguyên** dù đã làm xong.
+
+**Nguyên nhân:** `markAnswered()` gỡ `.missing` trong vòng lặp `querySelectorAll('[data-num]')`. Ô `open_cloze` nằm trong `<span class="gap">` — thẻ này **không có** `data-num` (chỉ `input` bên trong có `data-qnum`), nên không bao giờ lọt vào vòng lặp đó. Task 6 lại gắn `.missing` thẳng lên `input[data-qnum]`. Gắn một đường, gỡ một đường khác → kẹt.
+
+Đây đúng là rủi ro tôi đã ghi ở phần bàn giao sau Task 4/7; Task 6 gắn dấu đúng chỗ nhưng chiều gỡ vẫn hở.
+
+**Cách vá:** sửa ở `app-render.js` (nơi sinh ra vấn đề, không phải nơi lộ ra), thêm `if (isDone) el.classList.remove('missing')` vào đúng vòng lặp đã duyệt `input[type="text"][data-qnum]`.
+
+**Kiểm chứng:** dựng `classList` giả, đặt ô ở trạng thái `['gap-input','missing']` rồi gõ đáp án → trước vá còn `missing`, sau vá chỉ còn `gap-input filled`. Chạy lại toàn bộ: 14/14 kiểm tra render PASS, 0 lệch trên hai đề thật, `node --test` 33/33 pass.
+
+**Ruling:** vá tại Task 4 thay vì Task 6 vì `markAnswered` là API chung — Task 6 dùng đúng hợp đồng đã công bố, lỗi nằm ở hợp đồng.
+
+**Lo ngại của implementer (chưa chạy được kiểm tra trên trình duyệt thật vì không có backend Supabase sống):** hợp lý. Đã bù bằng cách chạy module với output thật của `start_exam`/`submit_quiz` từ Postgres dựng trong Docker. Vẫn giữ khuyến nghị: **bấm thử trên trình duyệt trước khi merge.**
+
+### Kiểm chứng đề TRỘN BA DẠNG (tính năng cốt lõi user yêu cầu)
+`seed-demo.sql` chỉ có đề một dạng, nên tôi tự tạo đề `MIX9` trong DB Docker: 3 phần (`mcq` 2 câu + `open_cloze` 2 câu + `mcq_cloze` 1 câu), số câu đánh liên tục 1→5 xuyên các phần.
+
+**Vẽ đề (`app-render.js`) — 9/9 PASS:**
+- Nav ra đúng `1,2,3,4,5` liên tục, không nhóm lại theo phần.
+- Phần `mcq` sinh 2 câu × 4 radio; phần `open_cloze` sinh đúng 2 ô text; phần `mcq_cloze` sinh 4 radio cho câu 5.
+- `{{0}}` trong phần 2 ra ví dụ mẫu, không sinh ô nhập; 3 tiêu đề phần đều hiện; không sót cú pháp `{{ }}`.
+
+**Chấm bài (`submit_quiz`) — đúng 3/5:**
+
+| Câu | Dạng | HS chọn | Đáp án | Kết quả |
+|---|---|---|---|---|
+| 1 | mcq | B | B | ✓ |
+| 2 | mcq | A | C | ✗ |
+| 3 | open_cloze | `WAS` | is / was | ✓ (nhiều đáp án + không phân biệt hoa thường) |
+| 4 | open_cloze | `are` | is | ✗ |
+| 5 | mcq_cloze | A | A | ✓ |
+
+**Màn kết quả (`app-result.js`) — 9/9 PASS:** đủ 5 câu, 3 badge Đúng / 2 badge Sai, `mcq` hiện lại đủ phương án còn `open_cloze` chỉ hiện từ đã gõ, câu 3 hiện cả hai đáp án chấp nhận `is / was`, đúng 3 khối giải thích (chỉ câu có `explanation`), điểm `3/5`.
+
+**Vòng lưu → khôi phục phiên:** `collectAnswers` → JSON → `applyAnswers` → `collectAnswers` trả lại **đúng nguyên vẹn** đáp án trên cả hai dạng nhập (radio và text), trên cả hai đề thật. Reload trang giữa chừng không mất bài.
+
+## Task 8: complete — `b280d38` — admin.html + admin-api.js + khung admin.js
+Tự review:
+- `diff` cả ba file với brief → **khớp 100%** (`admin.html`, `admin.js`, `admin-api.js` không lệch dòng nào).
+- 48 id khai báo; đối chiếu với 38 id mà T9/T10/T11 sẽ dùng → `comm -13` **rỗng**, không thiếu id nào.
+- Export `admin-api.js` (`api, esc, toast, getToken, setToken, clearToken`) phủ đủ những gì T9/T10/T11 import. Bốn hàm `admin.js` gọi (`initExams, loadExams, initResults, loadExamOptions`) đều được T9/T11 export đúng tên.
+- **Bảo mật:** `grep` `service_role|SERVICE_ROLE` trên `admin-api.js`, `admin.js`, `admin.html`, `config.js` → **không có kết quả**. Client chỉ gửi anon key qua gateway; quyền admin do `x-admin-token` quyết định. Ràng buộc CLAUDE.md còn nguyên.
+
+**Xử lý ba lo ngại của implementer:**
+1. *Import tĩnh `admin-exams.js`/`admin-results.js` chưa tồn tại* → đúng, là trạng thái trung gian có chủ đích của việc chia Task 8→11. Không chặn.
+2. *`.select-sm`, `.field-inline` chưa có style* → tôi quét toàn bộ class `admin.html` dùng: 14 class không có trong `admin.css`, nhưng **11 trong số đó đã có sẵn ở `styles.css`** (admin.html nạp cả hai file). Ba class còn lại — `.card-title`, `.field-inline`, `.select-sm` — nằm đúng trong khối CSS mà **Task 11** sẽ thêm vào cuối `admin.css`. Ruling: không phải thiếu sót, để Task 11 xử lý.
+3. *`deploy.yml`* → đã có chủ, Task 12.
+
+## Task 10: complete — `admin-sections.js`
+- Commit: `2af21e3` "feat(admin): soạn phần thi và bảng câu hỏi cho ba dạng" (297 dòng)
+- Self-review (reviewer sonnet vẫn chết 429 nên tự soát bằng Bash):
+  - `diff` với code trong brief: lệch đúng MỘT chỗ — `moveSection` thêm `exam_id: exam.id`.
+    **Đây là bản vá đúng, không phải lệch spec.** `supabase/functions/admin/index.ts:191-193`
+    kiểm `parseInt(payload.exam_id)` trước khi gọi RPC, và RPC `reorder_sections` lọc update
+    theo `p_exam_id`. Thiếu nó thì mọi cú bấm ↑/↓ đều lỗi `'exam_id' không hợp lệ.`
+    Ruling: nhận bản vá, brief sai — ghi nhận để Task 12 không copy lại code brief.
+  - Payload đối chiếu Edge Function: `save_section` (exam_id/kind/position/title/instructions/
+    passage/example ✓), `save_questions` (open_cloze → `accepted_answers[]`; mcq/mcq_cloze →
+    `content.options.{a,b,c,d}` + `correct`; mcq thêm `content.stem` ✓), `delete_section`,
+    `import_csv`, `reorder_sections` — 6/6 action đều có `case` trong `index.ts`.
+  - Escape: mọi dữ liệu từ DB (`title`, `instructions`, `example`, `passage`, `stem`,
+    options a–d, `explanation`, `accepted_answers`) đều qua `esc()`. Phần `${}` không escape
+    còn lại toàn là `sec.id` / `q.number` / literal — an toàn.
+  - Import `diffBlanks`, `scanBlanks` khớp export thật của `lib-passage.js`.
+  - `reopen()` dùng `await import('./admin-exams.js')` động → tránh vòng lặp ES module với Task 9.
+  - CSS: 7 class mới (`.sec-card .q-table .q-table-wrap .w-num .mono .pill .blank-hint`)
+    chưa có trong `admin.css`/`styles.css` — đều nằm trong khối CSS Task 11 sẽ append
+    (plan dòng ~2124-2162, `.q-table .w-num` ở dòng 2153). Không phải thiếu sót.
+- Regression: `node --test 'tests/*.test.mjs'` → 33/33 pass.
+
+## Task 9: complete — `admin-exams.js`
+- Commit: `9aaaf90` "feat(admin): danh sách đề và form thông tin đề" (169 dòng)
+- Self-review:
+  - `diff` với code brief: **IDENTICAL** (169/169 dòng). Implementer đã tự đối chiếu
+    `index.ts:38-149` và xác nhận không có tham số thiếu như lỗi `reorder_sections` ở Task 10.
+  - Export `initExams`, `loadExams` (khớp import của `admin.js:2`) và `openExam`
+    (khớp `await import('./admin-exams.js')` động trong `admin-sections.js` → vòng lặp
+    ES module được cắt đúng chỗ).
+  - Import `toUtcIso`, `toLocalInput`, `formatVn` — cả ba tồn tại thật trong `lib-time.js`.
+  - Escape: `code`, `title`, `subtitle` đều qua `esc()`. Ba chỗ nội suy trần đều an toàn:
+    `countOf()` trả số, `formatVn()` trả chuỗi ngày `vi-VN`, `e.duration_min` là số.
+    Riêng dòng 159 `current.title` nằm trong `confirm()` (text thuần, không phải HTML).
+  - Pre-flight của controller trước khi dispatch: 24/24 id DOM có trong `admin.html`,
+    5/5 action (`list_exams get_exam save_exam delete_exam duplicate_exam`) có `case`.
+- Regression: 33/33 pass.
+- Băn khoăn ghi nhận (KHÔNG chặn, để Task 12 / sau khi merge):
+  - `exam-open-link` trỏ tĩnh `index.html`, không prefill mã đề vì `app.js` chưa đọc query
+    string. Đúng brief. Ruling: giữ nguyên — prefill là tính năng mới, ngoài phạm vi Plan B.
+  - `.pill`, `.pill.ok/.draft/.bad`, `.exam-card` chưa có CSS. Ruling: đã nằm trong khối
+    CSS Task 11 append (cùng nhóm 7 class thiếu đã ghi ở Task 10). Task 11 phải phủ hết.
+
+## Task 11: complete — `admin-results.js` + khối CSS `admin.css`
+- Commit: `6e46f02` "feat(admin): bảng kết quả theo đề và xem chi tiết bài làm"
+  (`admin-results.js` 169 dòng mới, `admin.css` +30 dòng)
+- Commit sửa: `dee7e60` "fix(admin): gỡ luật .det-opt.is-chosen-right bị luật sau phủ hoàn toàn"
+- Self-review:
+  - `diff` JS với brief: **IDENTICAL**. `diff` khối CSS 29 dòng cuối `admin.css` với brief:
+    **IDENTICAL**.
+  - Export `initResults`, `loadExamOptions` — khớp `admin.js:3`.
+  - 4/4 action (`list_exams get_exam list_submissions clear_submissions`) có `case` trong
+    Edge Function; implementer đã tự đối chiếu payload, không thiếu tham số.
+  - 13/13 id DOM tồn tại trong `admin.html` (controller pre-flight trước khi dispatch).
+  - **8/8 class thiếu từ Task 9 + Task 10 nay đã có style**: `.sec-card .q-table
+    .q-table-wrap .q-table .w-num .mono .pill(+ok/draft/bad) .blank-hint .exam-card`.
+    Gap CSS của Plan B đóng lại hoàn toàn.
+  - Escape: dữ liệu DB (`code`, `title`, `full_name`, `class_name`, options a–d, `stem`,
+    `explanation`, `accepted_answers`) đều qua `esc()`. Các `${}` trần còn lại: `e.id` (số),
+    tên class literal, và dòng 78 dùng `textContent` — an toàn.
+  - Cột Excel: 8 cột (`ID, Mã đề, Tên đề, Họ và tên, Lớp, Điểm, Tổng, Thời gian nộp`) khớp
+    100% tên + thứ tự + `!cols` với `supabase/functions/export/index.ts:30-43`. Hai đường
+    tải Excel không lệch nhau.
+  - Hàm `isRight` (trim + lower + loại chuỗi rỗng) khớp chính xác SQL `is_correct`
+    (`schema.sql:103-108`) → số câu sai hiện trong modal không lệch với `score` của DB.
+- **Bug đã sửa:** implementer báo `.det-opt.is-chosen-right` bị định nghĩa hai lần
+  (dòng 114 cũ `{font-weight:600}` và dòng 165 mới `{background:#dcfce7; font-weight:600}`).
+  Luật cũ bị luật sau phủ HOÀN TOÀN — cùng selector, cùng specificity, cùng thuộc tính,
+  luật sau thắng → dòng 114 là CSS chết. Đã xoá dòng 114 (`dee7e60`).
+  Ruling: xoá luật cũ chứ không sửa luật mới, vì luật mới là bản đầy đủ hơn và là bản
+  brief chỉ định. Chi phí nếu sai: chỉ là màu nền ô "học sinh chọn đúng" trong modal.
+- Regression: `node --test` 33/33 pass; `bash tests/sql/run.sh` TẤT CẢ PASS
+  (gồm assert bảo mật: anon không select được `questions`/`exams`, không gọi được
+  `exam_by_code`, chỉ gọi được `exam_info`).
