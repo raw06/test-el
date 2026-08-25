@@ -58,3 +58,26 @@ Ruling: dispatch theo thứ tự **T10 trước T9**. Giá nếu sai: không có
 - T7 độc lập sau T3.
 - T8 trước T10/T9/T11.
 - T12 cuối cùng, và **không dispatch cho subagent** — nó deploy thật lên GitHub Pages + Supabase.
+
+---
+
+## Task 1: complete
+
+**Commit:** `dd7cf3d` — feat: lib-time đổi giờ giữa form và DB theo múi giờ Việt Nam (`lib-time.js` 34 dòng, `tests/lib-time.test.mjs` 52 dòng)
+
+**Tự review (chạy thật bằng node):**
+
+| Kiểm | Kết quả |
+|---|---|
+| `toUtcIso('2026-08-25T14:30')` | `2026-08-25T07:30:00.000Z` — đúng −7h |
+| Qua ngày: `03:00` VN | `2026-08-24T20:00:00.000Z` — lùi sang hôm trước, đúng |
+| Dạng có giây | `14:30:45` → `07:30:45.000Z` |
+| Rác/rỗng/`null`/`undefined`/`'2026-13-45T99:99'` | đều trả `null`, không ném |
+| Khứ hồi 3 mốc hiểm (`23:59` cuối năm, nửa đêm mùng 1, nửa đêm thường) | cả 3 **OK**, không lệch |
+| `formatVn` | `14:30:00 25/8/2026`, rỗng/rác → `—` |
+
+**Điểm tốt:** dùng `Intl.DateTimeFormat` với `timeZone: 'Asia/Ho_Chi_Minh'` + `hourCycle: 'h23'` thay vì cộng trừ tay — nửa đêm ra `00` chứ không phải `24`. Hằng số `VN_OFFSET = '+07:00'` cố định, không phụ thuộc múi giờ máy giáo viên (comment đã nói rõ lý do).
+
+**Regression:** `node --test` 33/33 pass (10 lib-time + 10 lib-passage + 13 cũ), 0 fail.
+
+Không có lo ngại nào từ implementer, tôi cũng không tìm thấy.
