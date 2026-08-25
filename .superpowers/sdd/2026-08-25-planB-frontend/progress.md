@@ -213,3 +213,25 @@ Tự review:
 **Ruling:** vá tại Task 4 thay vì Task 6 vì `markAnswered` là API chung — Task 6 dùng đúng hợp đồng đã công bố, lỗi nằm ở hợp đồng.
 
 **Lo ngại của implementer (chưa chạy được kiểm tra trên trình duyệt thật vì không có backend Supabase sống):** hợp lý. Đã bù bằng cách chạy module với output thật của `start_exam`/`submit_quiz` từ Postgres dựng trong Docker. Vẫn giữ khuyến nghị: **bấm thử trên trình duyệt trước khi merge.**
+
+### Kiểm chứng đề TRỘN BA DẠNG (tính năng cốt lõi user yêu cầu)
+`seed-demo.sql` chỉ có đề một dạng, nên tôi tự tạo đề `MIX9` trong DB Docker: 3 phần (`mcq` 2 câu + `open_cloze` 2 câu + `mcq_cloze` 1 câu), số câu đánh liên tục 1→5 xuyên các phần.
+
+**Vẽ đề (`app-render.js`) — 9/9 PASS:**
+- Nav ra đúng `1,2,3,4,5` liên tục, không nhóm lại theo phần.
+- Phần `mcq` sinh 2 câu × 4 radio; phần `open_cloze` sinh đúng 2 ô text; phần `mcq_cloze` sinh 4 radio cho câu 5.
+- `{{0}}` trong phần 2 ra ví dụ mẫu, không sinh ô nhập; 3 tiêu đề phần đều hiện; không sót cú pháp `{{ }}`.
+
+**Chấm bài (`submit_quiz`) — đúng 3/5:**
+
+| Câu | Dạng | HS chọn | Đáp án | Kết quả |
+|---|---|---|---|---|
+| 1 | mcq | B | B | ✓ |
+| 2 | mcq | A | C | ✗ |
+| 3 | open_cloze | `WAS` | is / was | ✓ (nhiều đáp án + không phân biệt hoa thường) |
+| 4 | open_cloze | `are` | is | ✗ |
+| 5 | mcq_cloze | A | A | ✓ |
+
+**Màn kết quả (`app-result.js`) — 9/9 PASS:** đủ 5 câu, 3 badge Đúng / 2 badge Sai, `mcq` hiện lại đủ phương án còn `open_cloze` chỉ hiện từ đã gõ, câu 3 hiện cả hai đáp án chấp nhận `is / was`, đúng 3 khối giải thích (chỉ câu có `explanation`), điểm `3/5`.
+
+**Vòng lưu → khôi phục phiên:** `collectAnswers` → JSON → `applyAnswers` → `collectAnswers` trả lại **đúng nguyên vẹn** đáp án trên cả hai dạng nhập (radio và text), trên cả hai đề thật. Reload trang giữa chừng không mất bài.
