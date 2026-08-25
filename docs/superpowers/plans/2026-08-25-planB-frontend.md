@@ -311,7 +311,7 @@ export function diffBlanks(passage, numbers) {
 
 - [ ] **Step 4: Chạy test để xác nhận PASS**
 
-Run: `node --test tests/`
+Run: `node --test 'tests/*.test.mjs'`
 Expected: cả ba file test đều pass (`lib-csv`, `lib-time`, `lib-passage`).
 
 - [ ] **Step 5: Commit**
@@ -2210,7 +2210,7 @@ number,content,option_a,option_b,option_c,option_d,correct,explanation
 
 - [ ] **Step 3: Chạy toàn bộ test**
 
-Run: `./tests/sql/run.sh && node --test tests/`
+Run: `./tests/sql/run.sh && node --test 'tests/*.test.mjs'`
 Expected: cả hai đều PASS.
 
 - [ ] **Step 4: Diễn tập tại chỗ — tạo một đề trộn ba dạng**
