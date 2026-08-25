@@ -113,7 +113,11 @@ export function markAnswered(form) {
     el.classList.toggle('answered', isDone);
     if (isDone) el.classList.remove('missing');
   });
+  // Ô điền từ nằm trong <span class="gap"> không có data-num, nên vòng lặp trên
+  // không gỡ được dấu đỏ cho nó — phải gỡ ở đây, không thì học sinh gõ xong vẫn thấy đỏ.
   form.querySelectorAll('input[type="text"][data-qnum]').forEach((el) => {
-    el.classList.toggle('filled', done.has(el.dataset.qnum));
+    const isDone = done.has(el.dataset.qnum);
+    el.classList.toggle('filled', isDone);
+    if (isDone) el.classList.remove('missing');
   });
 }
