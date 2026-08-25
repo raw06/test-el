@@ -114,3 +114,26 @@ Cả hai đề mẫu không báo lệch nào — nghĩa là `admin-sections.js` 
 **Regression:** `node --test` 33/33 pass.
 
 Không có lo ngại nào từ implementer, tôi cũng không tìm thấy.
+
+---
+
+## Task 3: complete
+
+**Commit:** `14c225a` — feat(app): index.html thêm màn nhập mã đề và khối lời giải (+41 −13)
+
+**Tự review:**
+
+| Kiểm | Kết quả |
+|---|---|
+| 35 id khai báo vs brief yêu cầu | **khớp tuyệt đối** — 0 thiếu, 0 thừa |
+| 30 id mà Task 4/5/6 sẽ dùng | **0 id thiếu** |
+| Bốn màn `screen-code / screen-info / screen-quiz / screen-result` | đủ, ba màn sau có `hidden` sẵn |
+| Nạp script | `supabase-js` + `config.js` thẻ thường, `app.js` là `type="module"` — đúng thứ tự |
+| Cân thẻ đóng/mở | 64/64 ✓ |
+| Fallback text (ràng buộc CLAUDE.md) | giữ đúng tinh thần: `📝 — câu`, `⏱️ — phút`, `⏳ Không giới hạn`, `<h1>` mặc định "Bài kiểm tra" |
+| Khối lời giải | `review-wrap` có `hidden` sẵn + ô "Chỉ hiện câu sai" (`only-wrong-result`) |
+| Ô nhập mã đề | `maxlength="12"`, `autocapitalize="characters"`, `spellcheck="false"`, placeholder `GOLD8` — hợp với ràng buộc mã đề `^[A-Z0-9]{3,12}$` của Plan A |
+
+**Lo ngại của implementer — xác nhận đúng và KHÔNG chặn:** `app.js` hiện tại vẫn là bản cũ nên trang học sinh sẽ hỏng cho tới Task 6. Đây là trạng thái trung gian đã dự liệu khi tách task theo file. Ruling: tiếp tục. Giá nếu sai: không có — Task 6 viết lại toàn bộ `app.js`.
+
+**Regression:** `node --test` 33/33 pass.
