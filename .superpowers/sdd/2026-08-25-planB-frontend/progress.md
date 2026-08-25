@@ -247,3 +247,25 @@ Tự review:
 1. *Import tĩnh `admin-exams.js`/`admin-results.js` chưa tồn tại* → đúng, là trạng thái trung gian có chủ đích của việc chia Task 8→11. Không chặn.
 2. *`.select-sm`, `.field-inline` chưa có style* → tôi quét toàn bộ class `admin.html` dùng: 14 class không có trong `admin.css`, nhưng **11 trong số đó đã có sẵn ở `styles.css`** (admin.html nạp cả hai file). Ba class còn lại — `.card-title`, `.field-inline`, `.select-sm` — nằm đúng trong khối CSS mà **Task 11** sẽ thêm vào cuối `admin.css`. Ruling: không phải thiếu sót, để Task 11 xử lý.
 3. *`deploy.yml`* → đã có chủ, Task 12.
+
+## Task 10: complete — `admin-sections.js`
+- Commit: `2af21e3` "feat(admin): soạn phần thi và bảng câu hỏi cho ba dạng" (297 dòng)
+- Self-review (reviewer sonnet vẫn chết 429 nên tự soát bằng Bash):
+  - `diff` với code trong brief: lệch đúng MỘT chỗ — `moveSection` thêm `exam_id: exam.id`.
+    **Đây là bản vá đúng, không phải lệch spec.** `supabase/functions/admin/index.ts:191-193`
+    kiểm `parseInt(payload.exam_id)` trước khi gọi RPC, và RPC `reorder_sections` lọc update
+    theo `p_exam_id`. Thiếu nó thì mọi cú bấm ↑/↓ đều lỗi `'exam_id' không hợp lệ.`
+    Ruling: nhận bản vá, brief sai — ghi nhận để Task 12 không copy lại code brief.
+  - Payload đối chiếu Edge Function: `save_section` (exam_id/kind/position/title/instructions/
+    passage/example ✓), `save_questions` (open_cloze → `accepted_answers[]`; mcq/mcq_cloze →
+    `content.options.{a,b,c,d}` + `correct`; mcq thêm `content.stem` ✓), `delete_section`,
+    `import_csv`, `reorder_sections` — 6/6 action đều có `case` trong `index.ts`.
+  - Escape: mọi dữ liệu từ DB (`title`, `instructions`, `example`, `passage`, `stem`,
+    options a–d, `explanation`, `accepted_answers`) đều qua `esc()`. Phần `${}` không escape
+    còn lại toàn là `sec.id` / `q.number` / literal — an toàn.
+  - Import `diffBlanks`, `scanBlanks` khớp export thật của `lib-passage.js`.
+  - `reopen()` dùng `await import('./admin-exams.js')` động → tránh vòng lặp ES module với Task 9.
+  - CSS: 7 class mới (`.sec-card .q-table .q-table-wrap .w-num .mono .pill .blank-hint`)
+    chưa có trong `admin.css`/`styles.css` — đều nằm trong khối CSS Task 11 sẽ append
+    (plan dòng ~2124-2162, `.q-table .w-num` ở dòng 2153). Không phải thiếu sót.
+- Regression: `node --test 'tests/*.test.mjs'` → 33/33 pass.
