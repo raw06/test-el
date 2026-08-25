@@ -505,7 +505,8 @@ select assert(jsonb_array_length(submit_quiz('GOLD8','Phạm D','12A4','{"1":"C"
   'đề bật cờ thì review có dữ liệu');
 select assert(submit_quiz('GOLD8','Vũ E','12A5','{}')->'review'->0->>'chosen' is null,
   'câu bỏ trống có chosen = null');
-select assert((select count(*) from submissions) = 6, 'mọi lượt nộp đều được ghi');
+select assert((select count(*) from submissions s join exams e on e.id=s.exam_id
+                    where e.code in ('GOLD8','NOEXP')) = 5, 'mọi lượt nộp đều được ghi');
 
 -- anon không đọc được bảng gốc
 set role anon;
