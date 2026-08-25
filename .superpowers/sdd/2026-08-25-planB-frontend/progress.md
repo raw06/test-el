@@ -176,3 +176,19 @@ Tự review (bash + node, dựng DOM giả để chạy thật):
 - `node --test 'tests/*.test.mjs'` → 33/33 pass.
 
 **Lo ngại của implementer (`deploy.yml` chưa copy `app-result.js`):** đã có chủ. Ruling — đây là **Task 12**, task cuối Plan B, gom một lần cho cả 8 file mới. Không phải việc của Task 5, không chặn. Nhưng là lỗi chết trang nếu quên, nên đánh dấu: **Task 12 bắt buộc chạy trước khi merge vào `main`.**
+
+### Kiểm chứng bằng DB thật (Postgres 16 trong Docker, `schema.sql` + `seed-demo.sql`)
+Dựng DB sạch rồi chạy đúng ba RPC mà anon được phép gọi, đổ output thật vào `app-render.js`:
+
+| Kiểm | TAP8 (open_cloze) | GOLD8 (mcq_cloze) |
+|---|---|---|
+| Số câu trong nav | 8 | 8 |
+| Câu có ô nhập đáp án | 8 ✓ khớp | 8 ✓ khớp |
+| Gap ví dụ `{{0}}` tách riêng | 1 | 1 |
+| Còn sót cú pháp `{{ }}` | ✓ hết | ✓ hết |
+| Thẻ HTML thô lọt qua escape | ✓ sạch | ✓ sạch |
+
+- `start_exam` trả khoá cấp 1: `code, title, subtitle, duration_min, expires_at, sections`; mỗi section có `id, position, kind, title, instructions, passage, example, questions`; mỗi câu chỉ có `number, content`.
+- **Chuỗi `accepted_answers` và `explanation` KHÔNG xuất hiện trong output `start_exam`** (kiểm bằng `includes` trên toàn JSON) → đáp án vẫn không ra client trước khi nộp. Ràng buộc thiết kế trung tâm còn nguyên.
+- `submit_quiz` trả `review` gồm `{chosen, number, accepted, is_correct, section_id, explanation}` — khớp đúng những khoá `app-result.js` đọc.
+- Chấm `open_cloze` **không phân biệt hoa thường và tự trim**: nộp `"AT"` và `"  Due "` cho câu đáp án `at`/`due` → score 2. Đúng thiết kế.
