@@ -37,34 +37,107 @@
     </header>
 
     <nav class="tabs">
-      <button class="tab active" data-tab="questions">📝 Câu hỏi</button>
+      <button class="tab active" data-tab="exams">📚 Đề kiểm tra</button>
       <button class="tab" data-tab="results">📊 Kết quả</button>
-      <button class="tab" data-tab="settings">⚙️ Cài đặt</button>
     </nav>
 
-    <!-- Tab câu hỏi -->
-    <div id="tab-questions" class="tab-panel">
-      <div class="card toolbar">
-        <div class="toolbar-row">
-          <button id="add-q-btn" class="btn btn-primary">+ Thêm câu hỏi</button>
-          <button id="upload-csv-btn" type="button" class="btn btn-outline">⬆️ Thay đề bằng CSV</button>
-          <a href="mau-de.csv" id="csv-template" class="link-sm" download>Tải CSV mẫu</a>
-          <input id="csv-input" type="file" accept=".csv,text/csv" class="hidden" />
-          <span class="grow"></span>
-          <span id="q-count" class="muted small"></span>
+    <!-- Tab đề kiểm tra -->
+    <div id="tab-exams" class="tab-panel">
+      <!-- View A: danh sách đề -->
+      <div id="exams-list-view">
+        <div class="card toolbar">
+          <div class="toolbar-row">
+            <button id="add-exam-btn" class="btn btn-primary">+ Tạo đề mới</button>
+            <button id="reload-exams-btn" class="btn btn-outline">↻ Tải lại</button>
+            <span class="grow"></span>
+            <span id="exam-count" class="muted small"></span>
+          </div>
         </div>
-        <p class="hint">CSV cần các cột: <code>number, content, option_a, option_b, option_c, option_d, correct</code> (correct = A/B/C/D). Upload sẽ <b>thay toàn bộ</b> đề hiện tại.</p>
+        <div id="exams-list" class="q-list"></div>
       </div>
-      <div id="q-list" class="q-list"></div>
+
+      <!-- View B: soạn một đề -->
+      <div id="exam-edit-view" class="hidden">
+        <div class="card toolbar">
+          <div class="toolbar-row">
+            <button id="back-to-exams" type="button" class="btn btn-ghost">← Danh sách đề</button>
+            <span class="grow"></span>
+            <a id="exam-open-link" class="link-sm" target="_blank" rel="noopener">Mở trang làm bài ↗</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Thông tin đề</h3>
+          <form id="exam-form">
+            <input type="hidden" id="exam-id" />
+            <div class="opt-grid">
+              <label class="field">
+                <span class="field-label">Mã đề <em>*</em></span>
+                <input id="exam-code-in" required maxlength="12" class="code-input" placeholder="GOLD8" />
+              </label>
+              <label class="field">
+                <span class="field-label">Thời lượng (phút) <em>*</em></span>
+                <input id="exam-duration" type="number" min="1" max="600" step="1" required placeholder="60" />
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">Tên đề <em>*</em></span>
+              <input id="exam-title" required maxlength="120" placeholder="FCE Test 3 — Gold" />
+            </label>
+            <label class="field">
+              <span class="field-label">Phụ đề <span class="muted small">(tuỳ chọn)</span></span>
+              <input id="exam-subtitle" maxlength="120" placeholder="Use of English Part 1" />
+            </label>
+            <div class="opt-grid">
+              <label class="field">
+                <span class="field-label">Mở lúc <span class="muted small">(để trống = mở ngay)</span></span>
+                <input id="exam-opens" type="datetime-local" />
+              </label>
+              <label class="field">
+                <span class="field-label">Hết hạn lúc <span class="muted small">(để trống = không hạn)</span></span>
+                <input id="exam-expires" type="datetime-local" />
+              </label>
+            </div>
+            <label class="chk"><input type="checkbox" id="exam-published" /> Xuất bản — học sinh nhập mã vào làm được</label>
+            <label class="chk"><input type="checkbox" id="exam-explain" checked /> Hiện lời giải cho học sinh sau khi nộp</label>
+            <p class="hint">Giờ nhập ở đây luôn là <b>giờ Việt Nam</b>. Đổi thời lượng không ảnh hưởng em nào đang làm dở — đồng hồ của em đó đã chốt mốc kết thúc.</p>
+            <p class="err" id="exam-form-err"></p>
+            <div class="toolbar-row">
+              <button type="submit" id="exam-save-btn" class="btn btn-primary">Lưu thông tin đề</button>
+              <button type="button" id="exam-dup-btn" class="btn btn-outline">⧉ Nhân bản đề</button>
+              <span class="grow"></span>
+              <button type="button" id="exam-del-btn" class="btn btn-danger">🗑️ Xoá đề</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card toolbar">
+          <div class="toolbar-row">
+            <h3 class="card-title grow">Các phần thi</h3>
+            <select id="new-sec-kind" class="select-sm">
+              <option value="mcq">Trắc nghiệm A/B/C/D</option>
+              <option value="open_cloze">Đoạn văn — điền từ</option>
+              <option value="mcq_cloze">Đoạn văn — chọn A/B/C/D</option>
+            </select>
+            <button id="add-sec-btn" type="button" class="btn btn-primary">+ Thêm phần</button>
+          </div>
+          <p class="hint">Trong đoạn văn, đánh dấu chỗ trống bằng <code>{{9}}</code> — số trong ngoặc chính là số câu. Dùng <code>{{0}}</code> cho ví dụ mẫu (không tính điểm).</p>
+        </div>
+        <div id="sections-list"></div>
+      </div>
     </div>
 
     <!-- Tab kết quả -->
     <div id="tab-results" class="tab-panel hidden">
       <div class="card toolbar">
         <div class="toolbar-row">
-          <button id="reload-subs-btn" class="btn btn-outline">↻ Tải lại</button>
-          <button id="download-xlsx-btn" class="btn btn-primary">⬇️ Tải Excel (.xlsx)</button>
-          <button id="clear-subs-btn" class="btn btn-danger">🗑️ Xoá tất cả kết quả</button>
+          <label class="field field-inline">
+            <span class="field-label">Đề</span>
+            <select id="res-exam" class="select-sm"></select>
+          </label>
+          <button id="reload-subs-btn" type="button" class="btn btn-outline">↻ Tải lại</button>
+          <button id="download-xlsx-btn" type="button" class="btn btn-primary">⬇️ Tải Excel (.xlsx)</button>
+          <button id="clear-subs-btn" type="button" class="btn btn-danger">🗑️ Xoá kết quả đề này</button>
           <span class="grow"></span>
           <span id="sub-count" class="muted small"></span>
         </div>
@@ -77,71 +150,9 @@
         <p id="subs-empty" class="muted center hidden">Chưa có học sinh nào nộp bài.</p>
       </div>
     </div>
-
-    <!-- Tab cài đặt -->
-    <div id="tab-settings" class="tab-panel hidden">
-      <div class="card toolbar">
-        <form id="settings-form">
-          <label class="field">
-            <span class="field-label">Tên bài kiểm tra <em>*</em></span>
-            <input id="set-title" required maxlength="120" placeholder="Thì động từ" />
-          </label>
-          <label class="field">
-            <span class="field-label">Phụ đề <span class="muted small">(tuỳ chọn)</span></span>
-            <input id="set-subtitle" maxlength="120" placeholder="Test 15–16" />
-          </label>
-          <label class="field">
-            <span class="field-label">Thời lượng làm bài (phút) <em>*</em></span>
-            <input id="set-duration" type="number" min="1" max="600" step="1" required placeholder="60" />
-          </label>
-          <p class="hint">Tên và phụ đề hiện ở đầu trang làm bài. Đổi thời lượng chỉ áp dụng cho học sinh <b>bắt đầu sau khi lưu</b> — em nào đang làm vẫn giữ đồng hồ cũ. Số câu hỏi trang làm bài tự đếm theo đề hiện tại.</p>
-          <p class="err" id="set-err"></p>
-          <div class="toolbar-row">
-            <button type="submit" id="set-save-btn" class="btn btn-primary">Lưu cài đặt</button>
-            <button type="button" id="set-reload-btn" class="btn btn-outline">↻ Tải lại</button>
-          </div>
-        </form>
-      </div>
-    </div>
   </section>
 
-  <!-- Modal sửa/thêm câu hỏi -->
-  <div id="q-modal" class="modal hidden">
-    <div class="modal-box card">
-      <h3 id="q-modal-title">Thêm câu hỏi</h3>
-      <form id="q-form">
-        <input type="hidden" id="q-orig-number" />
-        <label class="field">
-          <span class="field-label">Số thứ tự câu <em>*</em></span>
-          <input id="q-number" type="number" min="1" required />
-        </label>
-        <label class="field">
-          <span class="field-label">Nội dung câu hỏi <em>*</em></span>
-          <textarea id="q-content" rows="2" required></textarea>
-        </label>
-        <div class="opt-grid">
-          <label class="field"><span class="field-label">Đáp án A <em>*</em></span><input id="q-a" required /></label>
-          <label class="field"><span class="field-label">Đáp án B <em>*</em></span><input id="q-b" required /></label>
-          <label class="field"><span class="field-label">Đáp án C <em>*</em></span><input id="q-c" required /></label>
-          <label class="field"><span class="field-label">Đáp án D <em>*</em></span><input id="q-d" required /></label>
-        </div>
-        <label class="field">
-          <span class="field-label">Đáp án đúng <em>*</em></span>
-          <select id="q-correct" required>
-            <option value="A">A</option><option value="B">B</option>
-            <option value="C">C</option><option value="D">D</option>
-          </select>
-        </label>
-        <p class="err" id="q-form-err"></p>
-        <div class="modal-actions">
-          <button type="button" id="q-cancel" class="btn btn-ghost">Huỷ</button>
-          <button type="submit" class="btn btn-primary">Lưu</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal chi tiết bài làm của học sinh -->
+  <!-- Modal chi tiết bài làm -->
   <div id="detail-modal" class="modal hidden">
     <div class="modal-box card detail-box">
       <header class="detail-head">
@@ -162,6 +173,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="config.js"></script>
-  <script src="admin.js"></script>
+  <script type="module" src="admin.js"></script>
 </body>
 </html>

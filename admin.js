@@ -1,332 +1,48 @@
-const FN_BASE = window.SUPABASE_URL + "/functions/v1";
-let token = sessionStorage.getItem("admin_token") || "";
-let questionsCache = [];
-let submissionsCache = [];
+import { api, setToken, getToken, clearToken } from './admin-api.js';
+import { initExams, loadExams } from './admin-exams.js';
+import { initResults, loadExamOptions } from './admin-results.js';
 
 const $ = (id) => document.getElementById(id);
-const show = (id) => { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); $(id).classList.remove('hidden'); };
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-
-function toast(msg, kind = 'ok') {
-  const t = $('toast');
-  t.textContent = msg; t.className = 'toast ' + kind;
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => t.classList.add('hidden'), 2800);
-}
-
-// Gọi Edge Function admin. Trả về data JSON; ném lỗi kèm message tiếng Việt.
-async function api(action, extra = {}) {
-  const res = await fetch(FN_BASE + "/admin", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      // anon key thoả mãn gateway JWT của Supabase; quyền admin thật do x-admin-token kiểm.
-      "Authorization": "Bearer " + window.SUPABASE_ANON_KEY,
-      "apikey": window.SUPABASE_ANON_KEY,
-      "x-admin-token": token,
-    },
-    body: JSON.stringify({ action, ...extra }),
-  });
-  let body = {};
-  try { body = await res.json(); } catch { /* ignore */ }
-  if (!res.ok) throw new Error(body.error || `Lỗi ${res.status}`);
-  return body;
-}
+const show = (id) => {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.add('hidden'));
+  $(id).classList.remove('hidden');
+};
 
 /* ---------- Đăng nhập ---------- */
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   $('login-err').textContent = '';
-  token = $('admin-token').value;
-  try {
-    await api('login');
-    sessionStorage.setItem('admin_token', token);
-    enterAdmin();
-  } catch (err) {
-    $('login-err').textContent = err.message;
-  }
+  setToken($('admin-token').value);
+  try { await api('login'); enterAdmin(); }
+  catch (err) { clearToken(); $('login-err').textContent = err.message; }
 });
 
 $('logout-btn').addEventListener('click', () => {
-  sessionStorage.removeItem('admin_token'); token = '';
-  show('screen-login'); $('admin-token').value = '';
+  clearToken();
+  show('screen-login');
+  $('admin-token').value = '';
 });
 
 async function enterAdmin() {
   show('screen-admin');
-  await loadQuestions();
+  initExams();
+  initResults();
+  await loadExams();
 }
 
-// Nếu đã có token trong session, tự đăng nhập lại.
-if (token) {
-  api('login').then(enterAdmin).catch(() => { sessionStorage.removeItem('admin_token'); token = ''; });
+// Đã có token trong session thì tự vào thẳng.
+if (getToken()) {
+  api('login').then(enterAdmin).catch(() => clearToken());
 }
 
 /* ---------- Tabs ---------- */
-document.querySelectorAll('.tab').forEach(tab => {
+document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
     tab.classList.add('active');
     const name = tab.dataset.tab;
-    $('tab-questions').classList.toggle('hidden', name !== 'questions');
+    $('tab-exams').classList.toggle('hidden', name !== 'exams');
     $('tab-results').classList.toggle('hidden', name !== 'results');
-    $('tab-settings').classList.toggle('hidden', name !== 'settings');
-    if (name === 'results') loadSubmissions();
-    if (name === 'settings') loadSettings();
+    if (name === 'results') loadExamOptions();
   });
 });
-
-/* ---------- Cài đặt bài kiểm tra ---------- */
-async function loadSettings() {
-  $('set-err').textContent = '';
-  try {
-    const { settings } = await api('get_settings');
-    $('set-title').value = settings?.title ?? '';
-    $('set-subtitle').value = settings?.subtitle ?? '';
-    $('set-duration').value = settings?.duration_min ?? 60;
-  } catch (err) { toast(err.message, 'bad'); }
-}
-
-$('set-reload-btn').addEventListener('click', loadSettings);
-
-$('settings-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  $('set-err').textContent = '';
-  const btn = $('set-save-btn');
-  btn.disabled = true;
-  try {
-    await api('save_settings', {
-      settings: {
-        title: $('set-title').value,
-        subtitle: $('set-subtitle').value,
-        duration_min: $('set-duration').value,
-      },
-    });
-    toast('Đã lưu cài đặt');
-  } catch (err) {
-    $('set-err').textContent = err.message;
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-/* ---------- Câu hỏi ---------- */
-async function loadQuestions() {
-  try {
-    const { questions } = await api('list_questions');
-    questionsCache = questions || [];
-    renderQuestions();
-  } catch (err) { toast(err.message, 'bad'); }
-}
-
-function renderQuestions() {
-  $('q-count').textContent = `${questionsCache.length} câu hỏi`;
-  $('q-list').innerHTML = questionsCache.map(q => {
-    const opts = ['a','b','c','d'].map(o => {
-      const cls = q.correct_answer === o.toUpperCase() ? 'correct' : '';
-      return `<span class="${cls}">${o.toUpperCase()}. ${esc(q['option_' + o])}</span>`;
-    }).join('');
-    return `<div class="card qi">
-      <div class="qi-num">${q.number}</div>
-      <div class="qi-body">
-        <div class="qi-stem">${esc(q.content)}</div>
-        <div class="qi-opts">${opts}</div>
-      </div>
-      <div class="qi-actions">
-        <button class="icon-btn" data-edit="${q.number}">Sửa</button>
-        <button class="icon-btn danger" data-del="${q.number}">Xoá</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// Uỷ quyền sự kiện cho nút Sửa/Xoá.
-$('q-list').addEventListener('click', async (e) => {
-  const edit = e.target.dataset.edit, del = e.target.dataset.del;
-  if (edit) openModal(questionsCache.find(q => String(q.number) === edit));
-  if (del) {
-    if (!confirm(`Xoá câu ${del}?`)) return;
-    try { await api('delete_question', { number: Number(del) }); toast('Đã xoá câu ' + del); loadQuestions(); }
-    catch (err) { toast(err.message, 'bad'); }
-  }
-});
-
-$('add-q-btn').addEventListener('click', () => {
-  const nextNum = questionsCache.reduce((m, q) => Math.max(m, q.number), 0) + 1;
-  openModal(null, nextNum);
-});
-
-/* ---------- Modal ---------- */
-function openModal(q, defaultNum) {
-  $('q-modal-title').textContent = q ? `Sửa câu ${q.number}` : 'Thêm câu hỏi';
-  $('q-orig-number').value = q ? q.number : '';
-  $('q-number').value = q ? q.number : (defaultNum ?? '');
-  $('q-content').value = q ? q.content : '';
-  $('q-a').value = q ? q.option_a : '';
-  $('q-b').value = q ? q.option_b : '';
-  $('q-c').value = q ? q.option_c : '';
-  $('q-d').value = q ? q.option_d : '';
-  $('q-correct').value = q ? q.correct_answer : 'A';
-  $('q-form-err').textContent = '';
-  $('q-modal').classList.remove('hidden');
-}
-function closeModal() { $('q-modal').classList.add('hidden'); }
-$('q-cancel').addEventListener('click', closeModal);
-$('q-modal').addEventListener('click', (e) => { if (e.target.id === 'q-modal') closeModal(); });
-
-$('q-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  $('q-form-err').textContent = '';
-  const question = {
-    number: Number($('q-number').value),
-    content: $('q-content').value,
-    option_a: $('q-a').value, option_b: $('q-b').value,
-    option_c: $('q-c').value, option_d: $('q-d').value,
-    correct_answer: $('q-correct').value,
-  };
-  try {
-    await api('save_question', { question });
-    closeModal(); toast('Đã lưu câu hỏi'); loadQuestions();
-  } catch (err) { $('q-form-err').textContent = err.message; }
-});
-
-/* ---------- Upload CSV ---------- */
-$('upload-csv-btn').addEventListener('click', () => $('csv-input').click());
-
-$('csv-input').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  e.target.value = ''; // cho phép chọn lại cùng file
-  if (!file) return;
-  if (!confirm(`Thay TOÀN BỘ đề hiện tại bằng nội dung file "${file.name}"?\nĐề cũ sẽ bị xoá.`)) return;
-  try {
-    const csv = await file.text();
-    const { count } = await api('replace_csv', { csv });
-    toast(`Đã nạp ${count} câu hỏi từ CSV`); loadQuestions();
-  } catch (err) { toast(err.message, 'bad'); }
-});
-
-/* ---------- Kết quả ---------- */
-async function loadSubmissions() {
-  try {
-    const { submissions } = await api('list_submissions');
-    const rows = submissions || [];
-    submissionsCache = rows;
-    $('sub-count').textContent = `${rows.length} lượt nộp`;
-    $('subs-empty').classList.toggle('hidden', rows.length > 0);
-    $('subs-body').innerHTML = rows.map(r => `<tr>
-      <td>${r.id}</td>
-      <td>${esc(r.full_name)}</td>
-      <td>${esc(r.class_name)}</td>
-      <td class="score">${r.score}/${r.total}</td>
-      <td>${new Date(r.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</td>
-      <td><button class="icon-btn" data-view="${r.id}">Xem bài</button></td>
-    </tr>`).join('');
-  } catch (err) { toast(err.message, 'bad'); }
-}
-
-$('reload-subs-btn').addEventListener('click', loadSubmissions);
-
-/* ---------- Modal chi tiết bài làm ---------- */
-let detailSub = null; // bài đang mở
-
-// Uỷ quyền: click "Xem bài" ở bảng kết quả.
-$('subs-body').addEventListener('click', (e) => {
-  const id = e.target.dataset.view;
-  if (!id) return;
-  const sub = submissionsCache.find(s => String(s.id) === id);
-  if (sub) openDetail(sub);
-});
-
-function openDetail(sub) {
-  detailSub = sub;
-  $('detail-title').textContent = `Bài làm — ${sub.full_name}`;
-  const wrong = questionsCache.filter(q => {
-    const ans = (sub.answers || {})[q.number];
-    return String(ans || '').toUpperCase() !== q.correct_answer;
-  }).length;
-  $('detail-sub').textContent =
-    `${esc(sub.class_name)} · Điểm ${sub.score}/${sub.total} · Sai ${wrong} câu`;
-  $('only-wrong').checked = false;
-  renderDetail();
-  $('detail-modal').classList.remove('hidden');
-}
-
-function renderDetail() {
-  if (!detailSub) return;
-  const answers = detailSub.answers || {};
-  const onlyWrong = $('only-wrong').checked;
-  const items = questionsCache.map(q => {
-    const chosen = String(answers[q.number] || '').toUpperCase();
-    const isRight = chosen === q.correct_answer;
-    const blank = !chosen;
-    return { q, chosen, isRight, blank };
-  }).filter(it => !onlyWrong || !it.isRight);
-
-  if (!items.length) {
-    $('detail-list').innerHTML = `<p class="muted center">${onlyWrong ? 'Không có câu sai nào 🎉' : 'Bài làm trống.'}</p>`;
-    return;
-  }
-
-  $('detail-list').innerHTML = items.map(({ q, chosen, isRight, blank }) => {
-    const opts = ['a','b','c','d'].map(o => {
-      const L = o.toUpperCase();
-      const cls = [];
-      if (L === q.correct_answer) cls.push('is-correct');   // đáp án đúng
-      if (L === chosen && !isRight) cls.push('is-chosen-wrong'); // HS chọn sai
-      if (L === chosen && isRight) cls.push('is-chosen-right');  // HS chọn đúng
-      return `<div class="det-opt ${cls.join(' ')}">
-        <span class="det-key">${L}</span>
-        <span class="det-text">${esc(q['option_' + o])}</span>
-      </div>`;
-    }).join('');
-    const tag = isRight
-      ? '<span class="det-badge ok">Đúng</span>'
-      : (blank ? '<span class="det-badge blank">Bỏ trống</span>'
-               : '<span class="det-badge bad">Sai</span>');
-    return `<div class="det-q ${isRight ? '' : 'is-wrong'}">
-      <div class="det-q-head">
-        <span class="det-num">Câu ${q.number}</span>${tag}
-        <span class="det-meta">HS chọn: <b>${chosen || '—'}</b> · Đúng: <b>${q.correct_answer}</b></span>
-      </div>
-      <div class="det-stem">${esc(q.content)}</div>
-      <div class="det-opts">${opts}</div>
-    </div>`;
-  }).join('');
-}
-
-$('only-wrong').addEventListener('change', renderDetail);
-$('detail-close').addEventListener('click', () => $('detail-modal').classList.add('hidden'));
-$('detail-modal').addEventListener('click', (e) => { if (e.target.id === 'detail-modal') $('detail-modal').classList.add('hidden'); });
-
-$('clear-subs-btn').addEventListener('click', async () => {
-  if (!confirm('Xoá TẤT CẢ kết quả học sinh? Không thể hoàn tác.')) return;
-  try { await api('clear_submissions'); toast('Đã xoá tất cả kết quả'); loadSubmissions(); }
-  catch (err) { toast(err.message, 'bad'); }
-});
-
-// Tải Excel: dùng lại Edge Function export sẵn có, nhưng ở đây sinh CSV-xlsx từ dữ liệu đã tải.
-$('download-xlsx-btn').addEventListener('click', async () => {
-  try {
-    const { submissions } = await api('list_submissions');
-    downloadXlsx(submissions || []);
-  } catch (err) { toast(err.message, 'bad'); }
-});
-
-// Tạo file .xlsx thật bằng SheetJS (nạp từ CDN trong admin.html).
-function downloadXlsx(rows) {
-  if (typeof XLSX === 'undefined') { toast('Chưa tải được thư viện Excel, thử lại.', 'bad'); return; }
-  const data = rows.map(r => ({
-    'ID': r.id,
-    'Họ và tên': r.full_name,
-    'Lớp': r.class_name,
-    'Điểm': r.score,
-    'Tổng': r.total,
-    'Thời gian nộp': new Date(r.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-  }));
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{ wch: 6 }, { wch: 24 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 20 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'KetQua');
-  XLSX.writeFile(wb, 'ket-qua-lam-bai.xlsx');
-  toast('Đang tải file kết quả…');
-}
