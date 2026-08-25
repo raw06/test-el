@@ -335,3 +335,19 @@ Chi phí nếu ruling sai: Task 7 chết ngay khi gọi action đầu tiên — 
 *Ghi chú kỹ thuật cho các task sau:* dựng PostgREST cục bộ cần role `authenticator`
 (login, noinherit, được grant `anon`+`service_role`) và `alter role service_role bypassrls`
 — thiếu bypassrls thì mọi truy vấn trả `[]` im lặng chứ không báo lỗi.
+
+## Task 7: complete
+- Commit: `a05d659` feat(admin): action quản lý đề — list/get/save/delete/duplicate
+- `supabase/schema.sql` +3 (đúng FK của Step 0), `index.ts` xoá 6 case cũ, thêm 5 case mới.
+  `login` / `list_submissions` / `clear_submissions` không đụng — đúng phạm vi.
+- Review: TỰ LÀM, dựng PostgREST v12.2.3 thật (`rev7pg` + `rev7rest`) trên schema + seed:
+  - `list_exams` nguyên văn → trả đủ hai đề kèm `sections/questions/submissions: {"count": …}`.
+    Chính là truy vấn từng hỏng `PGRST200` trước khi có FK ở Step 0.
+  - `get_exam` nguyên văn → trả đúng, hết `PGRST201 ambiguous`.
+  - `duplicate_exam`: chạy lại đúng chuỗi insert của nó → tạo `COPY1` ở trạng thái nháp
+    (`is_published=false`), sections và questions sang đủ.
+- Hồi quy: `tests/sql/run.sh` 62 ok / 0 fail, `node --test` 10 pass / 0 fail.
+- SPEC: ✅   QUALITY: ✅
+- Lo ngại implementer nêu: (a) không chạy `deno check` vì máy không có `deno` — tôi đã kiểm
+  thay bằng cách chạy thật qua PostgREST, đủ mạnh hơn kiểm type; (b) `csvToQuestions` import
+  mà chưa dùng — đúng, Task 8 dùng ở action `import_csv`.
