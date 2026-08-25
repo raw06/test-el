@@ -351,3 +351,29 @@ Chi phí nếu ruling sai: Task 7 chết ngay khi gọi action đầu tiên — 
 - Lo ngại implementer nêu: (a) không chạy `deno check` vì máy không có `deno` — tôi đã kiểm
   thay bằng cách chạy thật qua PostgREST, đủ mạnh hơn kiểm type; (b) `csvToQuestions` import
   mà chưa dùng — đúng, Task 8 dùng ở action `import_csv`.
+
+### Finding 19 — Task 8 có HAI đường làm mất dữ liệu thật, cùng một gốc
+Dựng Postgres thật (container `probe8`) chạy đúng chuỗi lệnh brief 8 mô tả. Gốc chung:
+**ràng buộc `deferrable initially deferred` chỉ hoãn tới cuối TRANSACTION, mà PostgREST
+tự commit TỪNG lệnh** — nên mọi mẹo "dời sang dải tạm rồi dời về" qua REST đều vô nghĩa.
+
+1. `reorder_sections` — brief dời `position` sang dải `1000+n` rồi dời về, hai vòng lặp
+   update qua REST. Kiểm chứng: khi client chỉ gửi MỘT PHẦN danh sách (đúng kịch bản kéo-thả
+   một phần trong ba), vòng thứ hai chết
+   `duplicate key value violates unique constraint "sections_position_uniq"`, và bảng
+   nằm lại ở trạng thái nửa vời: một phần kẹt ở `position=1003`.
+2. `save_questions` và `import_csv` — brief `delete().eq("section_id", …)` rồi `insert(rows)`.
+   Kiểm chứng: xoá 8 câu của `Part 2` (commit ngay), rồi insert dải số câu đụng phần khác
+   → `questions_number_uniq` chặn → **phần thi còn 0 câu, mất trắng 8 câu**. Đây không phải
+   ca hiếm: `number` unique theo `exam_id` chứ không theo `section_id`, nên chỉ cần giáo viên
+   đánh lại số câu cho một phần là đụng.
+
+**Ruling: chuyển cả ba chỗ sang RPC `security definer`, một transaction.** Đã viết và kiểm
+`reorder_sections(p_exam_id, p_order)` + `save_questions(p_section_id, p_rows)` trên `probe8`:
+- Hoán vị hoàn toàn 1↔3 chạy trong MỘT `update … from jsonb_array_elements`, không cần dải tạm.
+- Gọi `save_questions` với số câu đụng phần khác → raise lỗi và **dữ liệu cũ còn nguyên 8 câu**.
+Hai hàm KHÔNG grant cho `anon` (chỉ service-role gọi), có `revoke all … from public`, nên
+không mở thêm bề mặt tấn công nào cho học sinh.
+Đã vá brief 8 (thêm Step 0 + sửa 3 case) và plan.
+Chi phí nếu ruling sai: hai hàm SQL thừa trong schema — rẻ hơn nhiều so với việc giáo viên
+mất cả phần thi vừa soạn.

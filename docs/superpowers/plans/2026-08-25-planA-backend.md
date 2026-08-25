@@ -1131,21 +1131,19 @@ git commit -m "feat(admin): action quản lý đề — list/get/save/delete/dup
       }
 
       case "reorder_sections": {
+        // Gọi RPC vì PostgREST tự commit TỪNG update: ràng buộc deferrable chỉ hoãn
+        // tới cuối transaction, mà mỗi update là một transaction riêng -> vẫn đụng khoá.
+        const examId = parseInt(payload.exam_id, 10);
         const order = payload.order; // [{id, position}, …]
+        if (!Number.isInteger(examId)) throw new Error("'exam_id' không hợp lệ.");
         if (!Array.isArray(order)) throw new Error("'order' phải là mảng.");
-        // position là unique deferrable -> dời sang dải tạm trước, tránh đụng khoá.
-        for (const it of order) {
-          const { error } = await sb.from("sections")
-            .update({ position: 1000 + parseInt(it.position, 10) })
-            .eq("id", parseInt(it.id, 10));
-          if (error) throw error;
-        }
-        for (const it of order) {
-          const { error } = await sb.from("sections")
-            .update({ position: parseInt(it.position, 10) })
-            .eq("id", parseInt(it.id, 10));
-          if (error) throw error;
-        }
+        const { error } = await sb.rpc("reorder_sections", {
+          p_exam_id: examId,
+          p_order: order.map((it: any) => ({
+            id: parseInt(it.id, 10), position: parseInt(it.position, 10),
+          })),
+        });
+        if (error) throw error;
         return json({ ok: true });
       }
 
@@ -1202,14 +1200,13 @@ git commit -m "feat(admin): action quản lý đề — list/get/save/delete/dup
           };
         });
 
-        // Thay cả bảng câu của phần này: xoá rồi chèn lại.
-        const del = await sb.from("questions").delete().eq("section_id", sec.id);
-        if (del.error) throw del.error;
-        if (rows.length) {
-          const ins = await sb.from("questions").insert(rows);
-          if (ins.error) throw ins.error;
-        }
-        return json({ ok: true, count: rows.length });
+        // Gọi RPC để xoá + chèn nằm trong MỘT transaction. Nếu tách làm hai lệnh
+        // PostgREST, xoá xong mà chèn hỏng thì cả phần thi mất trắng (đã kiểm chứng).
+        const { data: n, error } = await sb.rpc("save_questions", {
+          p_section_id: sec.id, p_rows: rows,
+        });
+        if (error) throw error;
+        return json({ ok: true, count: n });
       }
 
       case "delete_question": {
@@ -1235,11 +1232,12 @@ git commit -m "feat(admin): action quản lý đề — list/get/save/delete/dup
           section_id: sec.id, exam_id: sec.exam_id, kind: "mcq", number: q.number,
           content: q.content, accepted_answers: q.accepted_answers, explanation: q.explanation,
         }));
-        const del = await sb.from("questions").delete().eq("section_id", sec.id);
-        if (del.error) throw del.error;
-        const ins = await sb.from("questions").insert(rows);
-        if (ins.error) throw ins.error;
-        return json({ ok: true, count: rows.length });
+        // Cùng lý do như save_questions: một transaction, hỏng thì phần cũ còn nguyên.
+        const { data: n, error } = await sb.rpc("save_questions", {
+          p_section_id: sec.id, p_rows: rows,
+        });
+        if (error) throw error;
+        return json({ ok: true, count: n });
       }
 ```
 
