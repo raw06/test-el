@@ -385,3 +385,29 @@ Ba truy vấn của Task 9 chạy đúng trên PostgREST thật, KHÔNG cần v�
 - `list_submissions` lọc `exam_id=eq.2` → trả đúng một dòng của `GOLD8` kèm `answers`.
 - Tra `exams?code=eq.KHONGCO` → trả `[]`, nên `.maybeSingle()` cho `null` và export trả 404
   đúng như brief mô tả.
+
+---
+
+## Task 8: complete
+
+**Commit:** `c442daa` — feat(admin): action quản lý phần thi và câu hỏi (`supabase/schema.sql`, `supabase/functions/admin/index.ts`)
+
+**Tự review (Docker, container `rev8pg`, đã dọn):** nạp `schema.sql` + `seed-demo.sql` sạch, rồi chạy lại đúng hai kịch bản mất dữ liệu của Finding 19 trên code đã commit:
+
+| Kịch bản | Kết quả |
+|---|---|
+| `reorder_sections` hoán vị 1↔3 trong MỘT lần gọi | `Part A/B/1` đổi chỗ đúng, không đụng `sections_position_uniq`, không có phần nào kẹt ở position tạm |
+| `save_questions` chèn `number` trùng đề (20) | `ERROR: duplicate key ... questions_number_uniq` và **cả 3 phần giữ nguyên số câu (8/2/0)** — rollback sạch, khác hẳn đường REST cũ xoá trắng |
+| `save_questions(9999, …)` | `ERROR: Không tìm thấy phần thi.` |
+| `save_questions(3, '[]')` | trả 0, xoá hết câu của phần — đúng ý đồ "ghi cả bảng" |
+| Quyền `anon` trên 2 RPC mới | `reorder_sections=f`, `save_questions=f` — không lộ ra client |
+
+**Kiểm code:** 14 case, không case nào còn `delete()` + `insert()` thô trên `questions`. `save_questions` và `import_csv` đều gọi RPC. `save_section` khi update chủ động loại `kind` khỏi payload (FK ghép `(section_id, kind)` sẽ chặn nếu phần đã có câu).
+
+**Regression:** `tests/sql/run.sh` PASS, `node --test` 10/10 pass.
+
+**Hai lo ngại của implementer — xử lý:**
+1. *Chưa chạy `deno check`* — máy không có Deno, brief đã cho phép bỏ qua. Đối chiếu thủ công `CsvQuestion` (`lib-csv.ts`) với `case "import_csv"`: `number:number`, `content:{stem,options}`, `accepted_answers:string[]`, `explanation:string|null` — khớp đúng shape mà `save_questions` đọc. Task 10 sẽ deploy thật, lỗi kiểu (nếu có) lộ ngay ở bước đó.
+2. *Case REST đơn giản chưa chạy runtime* — `save_section`/`delete_section`/`delete_question` là CRUD một bảng, ràng buộc do DB giữ và đã được test SQL phủ. Chấp nhận.
+
+Ruling: cả hai lo ngại KHÔNG chặn. Giá nếu sai: một lỗi TypeScript lộ khi `supabase functions deploy` ở Task 10 — sửa tại chỗ, không mất dữ liệu.
