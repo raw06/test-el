@@ -98,6 +98,39 @@ create table public.submissions (
 );
 create index submissions_exam_idx on public.submissions (exam_id, id desc);
 
+-- ===== So khớp đáp án: bỏ qua hoa/thường và khoảng trắng thừa =====
+create or replace function public.is_correct(p_accepted text[], p_given text)
+returns boolean language sql immutable as $$
+  select exists (
+    select 1 from unnest(p_accepted) a
+    where btrim(coalesce(p_given, '')) <> ''
+      and lower(btrim(a)) = lower(btrim(p_given)));
+$$;
+
+-- ===== Tra đề theo mã + kiểm cửa sổ thời gian. Hàm NỘI BỘ, không cấp cho anon. =====
+create or replace function public.exam_by_code(p_code text)
+returns public.exams
+language plpgsql security definer set search_path = public as $$
+declare e public.exams;
+begin
+  select * into e from public.exams where code = upper(btrim(coalesce(p_code, '')));
+  -- Mã sai và đề chưa xuất bản trả CÙNG một lỗi: không để lộ đề nào tồn tại.
+  if not found or not e.is_published then
+    raise exception 'Không tìm thấy đề với mã này.';
+  end if;
+  if e.opens_at is not null and now() < e.opens_at then
+    raise exception 'Đề chưa mở. Bắt đầu lúc %.',
+      to_char(e.opens_at at time zone 'Asia/Ho_Chi_Minh', 'HH24:MI DD/MM/YYYY');
+  end if;
+  if e.expires_at is not null and now() > e.expires_at then
+    raise exception 'Đề đã hết hạn lúc %.',
+      to_char(e.expires_at at time zone 'Asia/Ho_Chi_Minh', 'HH24:MI DD/MM/YYYY');
+  end if;
+  return e;
+end $$;
+
+revoke all on function public.exam_by_code(text) from public;
+
 -- ===== RLS: KHÔNG policy nào cho anon trên cả 4 bảng =====
 alter table public.exams       enable row level security;
 alter table public.sections    enable row level security;
