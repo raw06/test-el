@@ -136,3 +136,87 @@ alter table public.exams       enable row level security;
 alter table public.sections    enable row level security;
 alter table public.questions   enable row level security;
 alter table public.submissions enable row level security;
+
+-- ===== Sau khi nhập mã, TRƯỚC khi bắt đầu: chỉ meta, không câu hỏi nào =====
+create or replace function public.exam_info(p_code text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.exams; v_total int;
+begin
+  e := public.exam_by_code(p_code);
+  select count(*) into v_total from public.questions q where q.exam_id = e.id;
+  return jsonb_build_object(
+    'code', e.code, 'title', e.title, 'subtitle', e.subtitle,
+    'duration_min', e.duration_min, 'total', v_total,
+    'expires_at', e.expires_at, 'show_explanations', e.show_explanations);
+end $$;
+
+-- ===== Bấm Bắt đầu: trả cả đề, KHÔNG kèm accepted_answers/explanation =====
+create or replace function public.start_exam(p_code text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.exams; v_sections jsonb;
+begin
+  e := public.exam_by_code(p_code);
+  select coalesce(jsonb_agg(t.obj order by t.position), '[]'::jsonb) into v_sections
+  from (
+    select sec.position,
+           jsonb_build_object(
+             'id', sec.id, 'position', sec.position, 'kind', sec.kind,
+             'title', sec.title, 'instructions', sec.instructions,
+             'passage', sec.passage, 'example', sec.example,
+             'questions', coalesce((
+               select jsonb_agg(jsonb_build_object('number', q.number, 'content', q.content)
+                                order by q.number)
+               from public.questions q where q.section_id = sec.id), '[]'::jsonb)
+           ) as obj
+    from public.sections sec where sec.exam_id = e.id
+  ) t;
+  return jsonb_build_object(
+    'code', e.code, 'title', e.title, 'subtitle', e.subtitle,
+    'duration_min', e.duration_min, 'expires_at', e.expires_at, 'sections', v_sections);
+end $$;
+
+-- ===== Chấm và ghi. Đáp án chỉ rời DB SAU KHI bài đã được lưu. =====
+create or replace function public.submit_quiz(
+  p_code text, p_full_name text, p_class text, p_answers jsonb
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.exams; v_score int; v_total int; v_review jsonb;
+begin
+  -- Kiểm hạn CẢ khi nộp, không chỉ khi bắt đầu: mở đề sớm rồi ngồi lỳ vẫn bị chặn.
+  e := public.exam_by_code(p_code);
+  if coalesce(btrim(p_full_name), '') = '' or coalesce(btrim(p_class), '') = '' then
+    raise exception 'Họ tên và lớp là bắt buộc.';
+  end if;
+  if jsonb_typeof(coalesce(p_answers, 'null'::jsonb)) <> 'object' then
+    raise exception 'Dữ liệu bài làm không hợp lệ.';
+  end if;
+
+  select count(*),
+         count(*) filter (where public.is_correct(q.accepted_answers, p_answers ->> q.number::text))
+    into v_total, v_score
+  from public.questions q where q.exam_id = e.id;
+
+  insert into public.submissions(exam_id, full_name, class_name, score, total, answers)
+  values (e.id, btrim(p_full_name), btrim(p_class), v_score, v_total, p_answers);
+
+  if e.show_explanations then
+    select jsonb_agg(jsonb_build_object(
+      'number', q.number, 'section_id', q.section_id,
+      'chosen', p_answers ->> q.number::text,
+      'is_correct', public.is_correct(q.accepted_answers, p_answers ->> q.number::text),
+      'accepted', to_jsonb(q.accepted_answers),
+      'explanation', q.explanation) order by q.number)
+      into v_review
+    from public.questions q where q.exam_id = e.id;
+  end if;
+
+  return jsonb_build_object('score', v_score, 'total', v_total,
+                            'review', coalesce(v_review, 'null'::jsonb));
+end $$;
+
+-- ===== Quyền: anon chỉ execute 3 hàm này, không hơn =====
+revoke all on function public.exam_info(text)                      from public;
+revoke all on function public.start_exam(text)                     from public;
+revoke all on function public.submit_quiz(text,text,text,jsonb)    from public;
+grant execute on function public.exam_info(text)                      to anon;
+grant execute on function public.start_exam(text)                     to anon;
+grant execute on function public.submit_quiz(text,text,text,jsonb)    to anon;
