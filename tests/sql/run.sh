@@ -26,9 +26,9 @@ docker exec -i "$C" psql -U postgres -q -v ON_ERROR_STOP=1 < supabase/schema.sql
 fail=0
 for f in tests/sql/[0-9]*.sql; do
   echo "→ $f"
-  # ON_ERROR_STOP=0: các file test cố tình gây lỗi để kiểm chứng constraint.
-  # Assertion thật dùng hàm assert_* nên lỗi thật vẫn bị bắt.
-  if ! docker exec -i "$C" psql -U postgres -q -v ON_ERROR_STOP=0 < "$f" 2>&1 | tee /tmp/quiz_test_out; then
+  # ON_ERROR_STOP=1: bắt lỗi thật trong file test (sai syntax, sai tên bảng, v.v.).
+  # Các ca cố ý gây lỗi đã được bọc trong hàm blocked() nên không nổi lên tới psql.
+  if ! docker exec -i "$C" psql -U postgres -q -v ON_ERROR_STOP=1 < "$f" 2>&1 | tee /tmp/quiz_test_out; then
     fail=1
   fi
   if grep -q 'ASSERT-FAIL' /tmp/quiz_test_out; then
