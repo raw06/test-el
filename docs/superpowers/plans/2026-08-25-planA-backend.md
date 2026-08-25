@@ -938,6 +938,16 @@ git commit -m "refactor(admin): tách parser CSV ra lib-csv.ts và thêm test"
 - Consumes: `csvToQuestions` (Task 6), schema (Task 2–4).
 - Produces: các action `list_exams`, `get_exam`, `save_exam`, `delete_exam`, `duplicate_exam` — tất cả nằm sau lớp kiểm `x-admin-token` sẵn có ở dòng 73–75.
 
+- [ ] **Step 0: Thêm khoá ngoại trực tiếp `questions.exam_id → exams(id)`**
+
+Trong `supabase/schema.sql`, thêm vào bảng `questions` (cạnh hai FK ghép sẵn có):
+
+```sql
+  -- PostgREST cần FK TRỰC TIẾP mới nhúng được `questions(count)` từ `exams`.
+  -- Toàn vẹn tham chiếu vốn đã có bắc cầu qua sections, dòng này thêm đường trực tiếp.
+  foreign key (exam_id) references public.exams(id) on delete cascade,
+```
+
 - [ ] **Step 1: Thay các action cũ bằng action quản lý đề**
 
 Trong `switch (action)`, **xoá** `list_questions`, `save_question`, `delete_question`, `replace_csv`, `get_settings`, `save_settings` (bảng cũ không còn). Giữ `login`. Thêm:
@@ -956,8 +966,10 @@ Trong `switch (action)`, **xoá** `list_questions`, `save_question`, `delete_que
       case "get_exam": {
         const id = parseInt(payload.exam_id, 10);
         if (!Number.isInteger(id)) throw new Error("'exam_id' không hợp lệ.");
+        // Giữa sections và questions có HAI khoá ngoại ghép, phải chỉ đích danh
+        // dùng cái nào, không thì PostgREST trả PGRST201 "ambiguous embedding".
         const { data, error } = await sb.from("exams")
-          .select("*, sections(*, questions(*))")
+          .select("*, sections(*, questions!questions_section_id_exam_id_fkey(*))")
           .eq("id", id).maybeSingle();
         if (error) throw error;
         if (!data) throw new Error("Không tìm thấy đề.");
@@ -1023,7 +1035,8 @@ Trong `switch (action)`, **xoá** `list_questions`, `save_question`, `delete_que
           throw new Error("Mã đề mới phải gồm 3–12 ký tự chữ HOA hoặc số.");
         }
         const { data: src, error: srcErr } = await sb.from("exams")
-          .select("*, sections(*, questions(*))").eq("id", id).maybeSingle();
+          .select("*, sections(*, questions!questions_section_id_exam_id_fkey(*))")
+          .eq("id", id).maybeSingle();
         if (srcErr) throw srcErr;
         if (!src) throw new Error("Không tìm thấy đề nguồn.");
 

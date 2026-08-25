@@ -308,3 +308,30 @@ máy Node cũ hơn), nhưng đã báo implementer rằng không cần dùng.
 Commit riêng: `README.md` + `CLAUDE.md` còn trỏ `scripts/gen-seed.mjs`, `data/questions.json`,
 `supabase/seed.sql` — cả ba vừa bị xoá. Đã sửa, và đổi luôn câu "chạy lại schema.sql là an toàn"
 thành cảnh báo `drop table ... cascade` (câu cũ giờ SAI và nguy hiểm).
+
+### Finding 18 — brief 7 dùng hai phép nhúng PostgREST mà schema không đỡ nổi
+Dựng PostgREST v12.2.3 thật (container `prpg` + `prrest`) trên chính `schema.sql` để kiểm
+trước khi giao Task 7. Cả hai truy vấn trong brief đều HỎNG:
+
+1. `list_exams` nhúng `questions(count)` từ `exams` → `PGRST200`:
+   *"Searched for a foreign key relationship between 'exams' and 'questions' … no matches"*.
+   `questions.exam_id` chỉ tham chiếu `exams` bắc cầu qua `sections(id, exam_id)`,
+   không có FK trực tiếp nên PostgREST không thấy đường nhúng.
+2. `get_exam` / `duplicate_exam` nhúng `sections(*, questions(*))` → `PGRST201` *ambiguous*:
+   giữa hai bảng có ĐÚNG HAI khoá ngoại ghép (`questions_section_id_exam_id_fkey` và
+   `questions_section_id_kind_fkey`), PostgREST không tự chọn được.
+
+**Ruling: sửa cả hai, mỗi lỗi một cách khác nhau.**
+- (1) thêm `foreign key (exam_id) references public.exams(id) on delete cascade` vào
+  `questions`. Đã kiểm sau khi thêm: `list_exams` trả đúng `{"count": 8}` cho cả hai đề.
+  Không nới lỏng gì — FK ghép vẫn còn nguyên, đây chỉ là đường tham chiếu trực tiếp
+  song song, và cascade đã đúng hướng.
+- (2) chỉ đích danh `questions!questions_section_id_exam_id_fkey(*)`. Đã kiểm: trả về
+  đủ 8 câu của `TAP8`. Chọn FK `(section_id, exam_id)` chứ không phải `(section_id, kind)`
+  vì đây mới là quan hệ chứa đựng thật; `kind` chỉ là bản sao để ép khớp dạng.
+Đã vá cả brief lẫn plan (thêm Step 0 + sửa hai lời gọi `.select`).
+Chi phí nếu ruling sai: Task 7 chết ngay khi gọi action đầu tiên — nhìn thấy liền.
+
+*Ghi chú kỹ thuật cho các task sau:* dựng PostgREST cục bộ cần role `authenticator`
+(login, noinherit, được grant `anon`+`service_role`) và `alter role service_role bypassrls`
+— thiếu bypassrls thì mọi truy vấn trả `[]` im lặng chứ không báo lỗi.
