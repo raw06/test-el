@@ -377,3 +377,11 @@ không mở thêm bề mặt tấn công nào cho học sinh.
 Đã vá brief 8 (thêm Step 0 + sửa 3 case) và plan.
 Chi phí nếu ruling sai: hai hàm SQL thừa trong schema — rẻ hơn nhiều so với việc giáo viên
 mất cả phần thi vừa soạn.
+
+### Tiền kiểm brief 9 (container `p9pg` + `p9rest`, trước khi giao)
+Ba truy vấn của Task 9 chạy đúng trên PostgREST thật, KHÔNG cần vá:
+- `submissions?select=…,exams(code,title)` → nhúng được (FK `submissions.exam_id → exams`
+  là FK đơn, không mơ hồ như cặp `sections`↔`questions` ở Finding 18).
+- `list_submissions` lọc `exam_id=eq.2` → trả đúng một dòng của `GOLD8` kèm `answers`.
+- Tra `exams?code=eq.KHONGCO` → trả `[]`, nên `.maybeSingle()` cho `null` và export trả 404
+  đúng như brief mô tả.
