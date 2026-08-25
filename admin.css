@@ -111,7 +111,6 @@ textarea:focus, select:focus { outline: none; border-color: var(--brand); backgr
 .det-opt.is-correct .det-key { background: var(--ok); color: #fff; }
 .det-opt.is-chosen-wrong { background: var(--warn-bg); border-color: var(--warn-line); }
 .det-opt.is-chosen-wrong .det-key { background: var(--warn-ink); color: #fff; }
-.det-opt.is-chosen-right { font-weight: 600; }
 
 @media (max-width: 640px) {
   .det-meta { margin-left: 0; width: 100%; }
