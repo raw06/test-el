@@ -285,3 +285,26 @@ Chi phí nếu ruling sai: implementer mất một vòng chạy lại Docker.
 Đã thử thật trên máy này: Node v24.19.0 import trực tiếp `.ts` từ `.test.mjs` chạy được,
 không cần cờ. **Ruling: giữ ghi chú trong plan** (vô hại, là phương án dự phòng cho
 máy Node cũ hơn), nhưng đã báo implementer rằng không cần dùng.
+
+## Task 5: complete
+- Commit: `4e90729` feat(db): seed hai đề mẫu CAE Tap water và FCE Gold, xoá seed cũ
+- `diff /tmp/seed-probe.sql supabase/seed-demo.sql` → GIỐNG HỆT khối SQL tôi đã tiền kiểm.
+- Review (tự làm qua Bash, container `rev56`): schema + seed nạp sạch, `TAP8` 8 câu, `GOLD8` 8 câu.
+- SPEC: ✅ — đúng 4 step, ba file lỗi thời đã bị `git rm`.
+- QUALITY: ✅
+
+## Task 6: complete
+- Commit: `4bae16f` refactor(admin): tách parser CSV ra lib-csv.ts và thêm test
+- `node --test 'tests/*.test.mjs'` → 10 pass / 0 fail. `bash tests/sql/run.sh` → 62 ok, 0 ASSERT-FAIL (không hồi quy).
+- SPEC: ✅ — `parseCsv` chuyển nguyên vẹn, `csvToQuestions` trả shape mới, 10 test đúng nguyên văn brief.
+- QUALITY: ✅ — tôi tự kiểm điều implementer nói không kiểm được: chạy `csvToQuestions`
+  trên CSV có ngoặc kép lồng, xuống dòng trong ô, `correct` viết thường, cột `explanation`
+  rỗng; sinh `insert` và nạp vào DB thật. Constraint `content_shape` + `mcq_answer_valid`
+  CHẤP NHẬN, và `submit_quiz` chấm đúng 2/3. Vòng CSV → jsonb → chấm điểm thông suốt.
+- Lo ngại của implementer về `replace_csv` còn thiếu `section_id`/`exam_id`/`kind`: ĐÚNG,
+  nhưng đúng phạm vi — Task 8 sẽ viết lại action đó.
+
+## Dọn tài liệu (ngoài brief, làm ngay vì là hệ quả trực tiếp của Task 5)
+Commit riêng: `README.md` + `CLAUDE.md` còn trỏ `scripts/gen-seed.mjs`, `data/questions.json`,
+`supabase/seed.sql` — cả ba vừa bị xoá. Đã sửa, và đổi luôn câu "chạy lại schema.sql là an toàn"
+thành cảnh báo `drop table ... cascade` (câu cũ giờ SAI và nguy hiểm).

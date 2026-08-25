@@ -6,8 +6,8 @@
 - API export + quản trị: Supabase Edge Functions (`export`, `admin`)
 
 ## Setup
-1. Tạo project Supabase (free). Vào SQL Editor chạy `supabase/schema.sql` rồi `supabase/seed.sql`.
-   (`schema.sql` dùng `if not exists` / `create or replace` nên chạy lại trên DB đã có dữ liệu là an toàn — không mất câu hỏi hay kết quả.)
+1. Tạo project Supabase (free). Vào SQL Editor chạy `supabase/schema.sql`, rồi `supabase/seed-demo.sql` nếu muốn có sẵn hai đề mẫu.
+   (⚠️ `schema.sql` mở đầu bằng `drop table ... cascade` — chạy lại trên DB đang có dữ liệu sẽ XOÁ SẠCH đề và bài làm của học sinh.)
 2. Điền `SUPABASE_URL` + anon key vào `config.js`.
 3. Deploy Edge Functions + đặt secret:
    ```
@@ -37,8 +37,8 @@ Tab **⚙️ Cài đặt** ghi vào bảng `settings` (1 dòng, `id = 1`); trang
 `https://<project>.supabase.co/functions/v1/export?token=<EXPORT_TOKEN>`
 
 ## Cập nhật đề
-Cách nhanh: dùng màn **admin.html** (thêm/sửa hoặc upload CSV).
-Cách thủ công: sửa `data/questions.json` → `node scripts/gen-seed.mjs` → chạy lại `supabase/seed.sql`.
+Dùng màn **admin.html**: tạo đề, thêm phần, thêm câu hỏi, hoặc upload CSV cho phần dạng trắc nghiệm.
+Hai đề mẫu trong `supabase/seed-demo.sql` là để tham khảo cấu trúc, không phải nguồn sự thật.
 
 ## Bảo mật
 - Đáp án chỉ nằm trong DB, chấm ở server (RPC), không gửi ra client.
