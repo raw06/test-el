@@ -162,3 +162,17 @@ Tự review:
 - **id `admin.html`(T8) ↔ id T9/T10/T11 dùng:** T8 khai báo 48 id, ba task sau tham chiếu 38 id. `comm -13` → **rỗng**. Không có id nào bị dùng mà chưa khai báo.
 - **action frontend gọi ↔ `case` trong `supabase/functions/admin/index.ts`:** frontend gọi 13 action, Edge Function có 14 `case` (thừa `delete_question`, dùng bởi nút xoá lẻ). `comm -13` → **rỗng**. Không có action nào gọi trượt.
 - Ruling: giữ nguyên thứ tự T8 → T10 → T9 → T11 theo Finding B3 (T10 sinh `admin-sections.js` mà T9 import).
+
+## Task 5: complete — `27bd82e` — app-result.js
+Tự review (bash + node, dựng DOM giả để chạy thật):
+- `diff` code trong brief với file thực tế → **khớp 100%**.
+- Đối chiếu hình dạng `review` với `submit_quiz` trong `supabase/schema.sql`: RPC trả `{number, section_id, chosen, is_correct, accepted, explanation}` — **đúng từng khoá** module đọc. `review` là `null` khi `show_explanations = false`, module xử lý đúng nhánh đó.
+- Chạy `renderResult` với đủ ba dạng câu: **16/16 PASS**.
+  - XSS: `<script>alert(1)</script>` trong `explanation`, `<b>` trong `stem` và trong tên học sinh đều bị escape — không lọt thẻ thật nào.
+  - `mcq`/`mcq_cloze` hiện lại đủ A/B/C/D, tô xanh đáp án đúng, gạch ngang đáp án học sinh chọn sai.
+  - `open_cloze` chỉ hiện từ đã gõ + danh sách đáp án chấp nhận (`during / in`), **không** vẽ nhầm bốn phương án — đúng vì `content` dạng này rỗng.
+  - `review: null` → ẩn `#review-wrap`; nộp tự động → ghi chú "hết giờ".
+  - Lọc "Chỉ hiện câu sai" → còn đúng 2/3 câu.
+- `node --test 'tests/*.test.mjs'` → 33/33 pass.
+
+**Lo ngại của implementer (`deploy.yml` chưa copy `app-result.js`):** đã có chủ. Ruling — đây là **Task 12**, task cuối Plan B, gom một lần cho cả 8 file mới. Không phải việc của Task 5, không chặn. Nhưng là lỗi chết trang nếu quên, nên đánh dấu: **Task 12 bắt buộc chạy trước khi merge vào `main`.**
