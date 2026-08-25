@@ -81,3 +81,36 @@ Ruling: dispatch theo thứ tự **T10 trước T9**. Giá nếu sai: không có
 **Regression:** `node --test` 33/33 pass (10 lib-time + 10 lib-passage + 13 cũ), 0 fail.
 
 Không có lo ngại nào từ implementer, tôi cũng không tìm thấy.
+
+---
+
+## Task 2: complete
+
+**Commit:** `7b8be5f` — feat: lib-passage tách đoạn văn theo dấu {{n}} (`lib-passage.js` 36 dòng, `tests/lib-passage.test.mjs` 68 dòng)
+
+**Tự review (chạy thật bằng node):**
+
+| Kiểm | Kết quả |
+|---|---|
+| Giữ nguyên xuống dòng + khoảng trắng kép | ghép lại các mảnh == chuỗi gốc, `true` |
+| Gọi `scanBlanks` 3 lần liên tiếp (bẫy `lastIndex` của regex `/g`) | `[9,10,11]` cả ba lần — implementer đã chủ động `GAP_RE.lastIndex = 0` |
+| `{{ 12 }}` có khoảng trắng trong ngoặc | nhận đúng `[12,13]` |
+| Rỗng / `null` | `[]`, không ném |
+| Không có chỗ trống nào | trả một mảnh `text` duy nhất |
+| `{{0}}` là ví dụ mẫu | `scanBlanks` vẫn liệt kê `0` (để render được), `diffBlanks` loại `0` ra — đúng ý đồ |
+| Lệch đủ 3 kiểu: `{{9}} {{9}} {{10}} {{12}}` vs `[9,10,11]` | `duplicates:[9]`, `missingQuestions:[12]`, `orphanQuestions:[11]` — chính xác |
+| `numbers` là chuỗi (`['9','10']`, dạng đến từ `dataset` HTML) | vẫn khớp nhờ `.map(Number)` |
+| `numbers` là `null` | không ném, báo `missingQuestions` |
+
+**Kiểm với dữ liệu THẬT** (dựng Postgres + nạp `schema.sql` + `seed-demo.sql`, đọc `passage` và số câu ra rồi chạy `diffBlanks`):
+
+```
+TAP8  | chỗ trống: 0,9,10,…,16 | câu: 9,…,16 | KHỚP ✓
+GOLD8 | chỗ trống: 0,1,2,…,8   | câu: 1,…,8  | KHỚP ✓
+```
+
+Cả hai đề mẫu không báo lệch nào — nghĩa là `admin-sections.js` (Task 10) sẽ không bắn cảnh báo giả trên đề thật.
+
+**Regression:** `node --test` 33/33 pass.
+
+Không có lo ngại nào từ implementer, tôi cũng không tìm thấy.
