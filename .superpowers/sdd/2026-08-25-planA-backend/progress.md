@@ -411,3 +411,32 @@ Ba truy vấn của Task 9 chạy đúng trên PostgREST thật, KHÔNG cần v�
 2. *Case REST đơn giản chưa chạy runtime* — `save_section`/`delete_section`/`delete_question` là CRUD một bảng, ràng buộc do DB giữ và đã được test SQL phủ. Chấp nhận.
 
 Ruling: cả hai lo ngại KHÔNG chặn. Giá nếu sai: một lỗi TypeScript lộ khi `supabase functions deploy` ở Task 10 — sửa tại chỗ, không mất dữ liệu.
+
+---
+
+## Task 9: complete
+
+**Commit:** `7a42a6f` — feat(admin): kết quả lọc theo đề, export thêm cột mã đề (`supabase/functions/export/index.ts`, `supabase/functions/admin/index.ts`)
+
+**Tự review (PostgREST v12 + Postgres 16 thật, container `r9pg`/`r9rest`, đã dọn):**
+
+| Kiểm | Kết quả |
+|---|---|
+| `submissions?select=…,exams(code,title)` | nhúng OK, không `PGRST201` — `submissions.exam_id` chỉ có MỘT FK tới `exams` nên không nhập nhằng |
+| Lọc `exam_id=eq.<id>` | trả đúng 1 dòng của `GOLD8`, không lẫn `TAP8` |
+| `list_submissions` (kèm `answers`) | trả đúng dữ liệu đã lọc |
+| `DELETE …?exam_id=eq.<id>` | `204`, sau đó `GOLD8=0 / TAP8=1` — xoá đúng phạm vi một đề, không còn xoá sạch mọi đề như `gte("id", 0)` cũ |
+
+**Kiểm cột Excel:** `rows` có 8 khoá (`ID, Mã đề, Tên đề, Họ và tên, Lớp, Điểm, Tổng, Thời gian nộp`), `ws["!cols"]` cũng 8 phần tử — khớp. Giờ vẫn `'vi-VN'` + `Asia/Ho_Chi_Minh`.
+
+**Regression:** `tests/sql/run.sh` PASS, `node --test` 10/10.
+
+**Lo ngại của implementer — đã xử lý:**
+1. *`admin.js` chưa truyền `exam_id`* → đúng, nhưng nằm ngoài phạm vi Plan A. Plan B Task 11 (`admin-results.js`) đã ghi sẵn `api('list_submissions', { exam_id: examId })` (dòng 1998) và `api('clear_submissions', { exam_id: examId })` (dòng 2094). Không cần vá gì thêm. Ruling: KHÔNG chặn — `admin.js` cũ sẽ hỏng cho tới Plan B Task 11, đó là trạng thái trung gian đã dự liệu của việc tách hai plan.
+2. *Chưa `deno check`* — như Task 8, máy không có Deno; lỗi kiểu (nếu có) sẽ lộ khi `supabase functions deploy` ở bước triển khai.
+
+---
+
+## Plan A — HOÀN TẤT (Task 1–9)
+
+Task A10 KHÔNG dispatch cho subagent (Ruling/Finding 3 giữ nguyên): nó xoá 51 câu hỏi và toàn bộ kết quả học sinh trên DB thật, và máy chưa cài `supabase` CLI. Lệnh cần chạy đã soạn ở `lenh-can-chay.md` (commit `53aeaea`), bàn lại cho người dùng quyết định.
