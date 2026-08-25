@@ -137,3 +137,23 @@ Không có lo ngại nào từ implementer, tôi cũng không tìm thấy.
 **Lo ngại của implementer — xác nhận đúng và KHÔNG chặn:** `app.js` hiện tại vẫn là bản cũ nên trang học sinh sẽ hỏng cho tới Task 6. Đây là trạng thái trung gian đã dự liệu khi tách task theo file. Ruling: tiếp tục. Giá nếu sai: không có — Task 6 viết lại toàn bộ `app.js`.
 
 **Regression:** `node --test` 33/33 pass.
+
+## Task 4: complete — `eb1c772` — app-render.js
+Tự review (bash + node, không dùng subagent vì reviewer sonnet đã chết 429 từ Task A4):
+- `diff` code trong brief với file thực tế → **khớp 100%**, không thêm bớt dòng nào.
+- Chạy `renderSections` với dữ liệu ba dạng (mcq + open_cloze + mcq_cloze, có cả gap `{{0}}` ví dụ): **14/14 PASS**.
+  - XSS: `<img src=x onerror=...>` trong `stem` và `<b>` trong `title` đều bị escape → không lọt thẻ thật nào.
+  - `{{0}}` ra `.gap-example` (không sinh input) — đúng ý "ví dụ mẫu không phải câu cần làm".
+  - Xuống dòng trong passage giữ nguyên (`quality.\nIn`) — ăn khớp `white-space: pre-wrap` của Task 7.
+  - `mcq_cloze` chỉ sinh `.gap-ref` trong đoạn văn, không sinh `.gap-input` → không có ô nhập lạc chỗ.
+  - `renderNav` sắp đúng 1,9,10,11 (liên tục toàn đề, không theo thứ tự phần).
+- `node --test 'tests/*.test.mjs'` → 33/33 pass.
+
+## Task 7: complete — `2fb37ed` — styles.css
+Tự review:
+- `diff` phần thêm với CSS trong brief → **khớp 100%**, chỉ append 94 dòng cuối file, không đụng CSS cũ.
+- Đối chiếu mọi biến CSS dùng (`--brand-soft --warn-bg --warn-ink --ok --card --line --radius --shadow --ink --muted`) và `@keyframes fadeUp`: **tất cả đã tồn tại** trong `:root` → không có màu nào ra `unset`.
+- Đối chiếu mọi class `app-render.js` sinh ra với selector trong `styles.css`: chỉ `.opt-text` không có rule riêng — **không phải lỗi mới**, `app.js` cũ cũng sinh class này và `styles.css` cũ cũng chưa bao giờ style nó (thừa hưởng font từ `.opt`). Ruling: bỏ qua, không phải regression.
+- Lo ngại của implementer (chưa kiểm bằng mắt vì Task 4/5 chạy song song): ghi nhận, sẽ kiểm ở bước cuối sau Task 6.
+
+**Ghi chú bàn giao cho Task 6:** `markAnswered()` chỉ toggle `.answered/.missing` trên phần tử có `data-num`. Ô `open_cloze` nằm trong `<span class="gap">` **không có** `data-num`, nên class `.gap-input.missing` (CSS Task 7 có định nghĩa) phải do Task 6 tự gắn khi đánh dấu câu chưa làm lúc nộp.
