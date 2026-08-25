@@ -269,3 +269,24 @@ Tự review:
     chưa có trong `admin.css`/`styles.css` — đều nằm trong khối CSS Task 11 sẽ append
     (plan dòng ~2124-2162, `.q-table .w-num` ở dòng 2153). Không phải thiếu sót.
 - Regression: `node --test 'tests/*.test.mjs'` → 33/33 pass.
+
+## Task 9: complete — `admin-exams.js`
+- Commit: `9aaaf90` "feat(admin): danh sách đề và form thông tin đề" (169 dòng)
+- Self-review:
+  - `diff` với code brief: **IDENTICAL** (169/169 dòng). Implementer đã tự đối chiếu
+    `index.ts:38-149` và xác nhận không có tham số thiếu như lỗi `reorder_sections` ở Task 10.
+  - Export `initExams`, `loadExams` (khớp import của `admin.js:2`) và `openExam`
+    (khớp `await import('./admin-exams.js')` động trong `admin-sections.js` → vòng lặp
+    ES module được cắt đúng chỗ).
+  - Import `toUtcIso`, `toLocalInput`, `formatVn` — cả ba tồn tại thật trong `lib-time.js`.
+  - Escape: `code`, `title`, `subtitle` đều qua `esc()`. Ba chỗ nội suy trần đều an toàn:
+    `countOf()` trả số, `formatVn()` trả chuỗi ngày `vi-VN`, `e.duration_min` là số.
+    Riêng dòng 159 `current.title` nằm trong `confirm()` (text thuần, không phải HTML).
+  - Pre-flight của controller trước khi dispatch: 24/24 id DOM có trong `admin.html`,
+    5/5 action (`list_exams get_exam save_exam delete_exam duplicate_exam`) có `case`.
+- Regression: 33/33 pass.
+- Băn khoăn ghi nhận (KHÔNG chặn, để Task 12 / sau khi merge):
+  - `exam-open-link` trỏ tĩnh `index.html`, không prefill mã đề vì `app.js` chưa đọc query
+    string. Đúng brief. Ruling: giữ nguyên — prefill là tính năng mới, ngoài phạm vi Plan B.
+  - `.pill`, `.pill.ok/.draft/.bad`, `.exam-card` chưa có CSS. Ruling: đã nằm trong khối
+    CSS Task 11 append (cùng nhóm 7 class thiếu đã ghi ở Task 10). Task 11 phải phủ hết.
